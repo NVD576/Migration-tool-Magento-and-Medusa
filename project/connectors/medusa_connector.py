@@ -43,10 +43,29 @@ class MedusaConnector(BaseConnector):
         endpoint = "admin/regions"
         return self._request("GET", endpoint)
 
+    def list_products(self, limit=50, offset=0, expand=None, fields=None):
+        endpoint = "admin/products"
+        params = {"limit": limit, "offset": offset}
+        if expand:
+            params["expand"] = expand
+        if fields:
+            params["fields"] = fields
+        return self._request("GET", endpoint, params=params)
+
+    def list_shipping_options(self, limit=50, offset=0):
+        endpoint = "admin/shipping-options"
+        params = {"limit": limit, "offset": offset}
+        return self._request("GET", endpoint, params=params)
+
     def create_draft_order(self, draft_order, idempotency_key=None):
         endpoint = "admin/draft-orders"
         headers = self._headers_with_idempotency(idempotency_key)
         return self._request("POST", endpoint, json=draft_order, headers=headers)
+
+    def create_order(self, order, idempotency_key=None):
+        endpoint = "admin/orders"
+        headers = self._headers_with_idempotency(idempotency_key)
+        return self._request("POST", endpoint, json=order, headers=headers)
 
     def finalize_draft_order(self, draft_order_id):
         """
