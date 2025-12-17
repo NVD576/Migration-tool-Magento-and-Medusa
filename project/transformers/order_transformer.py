@@ -1,0 +1,99 @@
+def _to_cents(value) -> int:
+    try:
+        return int(float(value) * 100)
+    except Exception:
+        return 0
+
+
+def _transform_address(mg_address: dict) -> dict:
+    if not mg_address:
+        return {}
+
+    street = mg_address.get("street")
+    if isinstance(street, list):
+        address_1 = street[0] if len(street) > 0 else None
+        address_2 = street[1] if len(street) > 1 else None
+    else:
+        address_1 = street
+        address_2 = None
+
+    province = mg_address.get("region") or mg_address.get("region_code")
+
+    return {
+        "first_name": mg_address.get("firstname"),
+        "last_name": mg_address.get("lastname"),
+        "phone": mg_address.get("telephone"),
+        "address_1": address_1,
+        "address_2": address_2,
+        "city": mg_address.get("city"),
+        "province": province,
+        "postal_code": mg_address.get("postcode"),
+        "country_code": (mg_address.get("country_id") or "").lower() or None,
+    }
+
+
+def transform_order_as_draft_order(mg_order: dict, region_id: str) -> dict:
+    """
+    Tạo payload draft order theo hướng "custom items" (không cần map sang variant_id).
+    Lưu ý: tuỳ phiên bản Medusa, schema có thể khác; main.py sẽ hỗ trợ dry-run để bạn test an toàn.
+    """
+    email = mg_order.get("customer_email") or ""
+
+    items = []
+    for it in mg_order.get("items", []) or []:
+        # Bỏ item con của bundle/configurable (nếu có)
+        if it.get("parent_item_id"):
+            continue
+
+        title = it.get("name") or it.get("sku") or "Item"
+        quantity = int(it.get("qty_ordered") or 0)
+        unit_price = _to_cents(it.get("price") or it.get("base_price") or 0)
+
+        if quantity <= 0:
+            continue
+
+        items.append(
+            {
+                "title": title,
+                "unit_price": unit_price,
+                "quantity": quantity,
+                "metadata": {
+                    "magento_sku": it.get("sku"),
+                    "magento_item_id": it.get("item_id"),
+                },
+            }
+        )
+
+    billing_address = _transform_address(mg_order.get("billing_address") or {})
+
+    # Magento không luôn có shipping_address trực tiếp; cố gắng lấy từ extension_attributes trước.
+    shipping_address = {}
+    ext = mg_order.get("extension_attributes") or {}
+    shipping_assignments = ext.get("shipping_assignments") or []
+    if shipping_assignments and isinstance(shipping_assignments, list):
+        sa0 = shipping_assignments[0] or {}
+        shipping = (sa0.get("shipping") or {})
+        shipping_address = _transform_address(shipping.get("address") or {})
+
+    payload = {
+        "email": email,
+        "region_id": region_id,
+        # Tuỳ version: có nơi dùng items, có nơi dùng custom_items.
+        "items": items,
+        "billing_address": billing_address or None,
+        "shipping_address": shipping_address or None,
+        "metadata": {
+            "magento_entity_id": mg_order.get("entity_id"),
+            "magento_increment_id": mg_order.get("increment_id"),
+            "magento_status": mg_order.get("status"),
+            "magento_grand_total": mg_order.get("grand_total"),
+            "magento_order_currency_code": mg_order.get("order_currency_code"),
+            "magento_created_at": mg_order.get("created_at"),
+            "magento_updated_at": mg_order.get("updated_at"),
+        },
+    }
+
+    # Loại bỏ None cho gọn payload
+    return {k: v for k, v in payload.items() if v is not None}
+
+
