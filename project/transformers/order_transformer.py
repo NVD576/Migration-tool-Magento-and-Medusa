@@ -1,6 +1,6 @@
 def _to_cents(value) -> int:
     try:
-        return int(float(value) * 100)
+        return int(float(value) )
     except Exception:
         return 0
 
@@ -39,7 +39,7 @@ def transform_order_as_draft_order(mg_order: dict, region_id: str) -> dict:
     """
     email = mg_order.get("customer_email") or ""
 
-    items = []
+    custom_items = []
     for it in mg_order.get("items", []) or []:
         # Bỏ item con của bundle/configurable (nếu có)
         if it.get("parent_item_id"):
@@ -52,7 +52,7 @@ def transform_order_as_draft_order(mg_order: dict, region_id: str) -> dict:
         if quantity <= 0:
             continue
 
-        items.append(
+        custom_items.append(
             {
                 "title": title,
                 "unit_price": unit_price,
@@ -78,8 +78,8 @@ def transform_order_as_draft_order(mg_order: dict, region_id: str) -> dict:
     payload = {
         "email": email,
         "region_id": region_id,
-        # Tuỳ version: có nơi dùng items, có nơi dùng custom_items.
-        "items": items,
+        # Custom line items: không cần map sang variant_id (thường giúp tránh reserve inventory khi convert-to-order)
+        "custom_items": custom_items,
         "billing_address": billing_address or None,
         "shipping_address": shipping_address or None,
         "metadata": {

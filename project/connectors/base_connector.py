@@ -12,7 +12,8 @@ class BaseConnector:
     def _request(self, method, endpoint, **kwargs):
         url = f"{self.base_url}/{endpoint.lstrip('/')}"
         for attempt in range(1, self.max_retries + 1):
-            response = requests.request(method, url,verify=self.verify_ssl, headers=self.headers, **kwargs)
+            headers = kwargs.pop("headers", self.headers)
+            response = requests.request(method, url, verify=self.verify_ssl, headers=headers, **kwargs)
             if response.status_code == 429:
                 wait = self.backoff_factor * attempt
                 print(f"Rate limit hit. Retrying in {wait}s...")

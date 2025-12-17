@@ -1,3 +1,28 @@
+import re
+import unicodedata
+
+
+def _slugify(text: str) -> str:
+    if not text:
+        return ""
+    text = unicodedata.normalize("NFKD", text)
+    text = "".join([c for c in text if not unicodedata.combining(c)])
+    text = text.lower().strip()
+    text = text.replace("đ", "d")
+    text = re.sub(r"[^a-z0-9]+", "-", text)
+    text = re.sub(r"-{2,}", "-", text).strip("-")
+    return text
+
+
+def _handle_from_magento_product(mg_product: dict) -> str:
+    # Ưu tiên SKU để idempotent (chạy lại không tạo trùng)
+    sku = (mg_product.get("sku") or "").strip()
+    if sku:
+        return _slugify(sku) or sku.lower()
+    name = (mg_product.get("name") or "").strip()
+    return _slugify(name) or f"product-{mg_product.get('id')}"
+
+
 def extract_images(mg_product, magento_base_url):
     images = []
 
@@ -15,13 +40,19 @@ def extract_images(mg_product, magento_base_url):
 
 def transform_product(mg_product, magento_base_url):
     name = mg_product["name"]
-    price = int(float(mg_product["price"]) * 100)
+    price = int(float(mg_product["price"]) )
+    handle = _handle_from_magento_product(mg_product)
 
     payload = {
         "title": name,
+        "handle": handle,
         "description": name,
         "status": "published",
         "discountable": True,
+        "metadata": {
+            "magento_id": mg_product.get("id"),
+            "magento_sku": mg_product.get("sku"),
+        },
 
         "options": [
             {
@@ -49,7 +80,6 @@ def transform_product(mg_product, magento_base_url):
         "sales_channels": [
             {
                 "id": "sc_01KC4H49PTBS2XBMJAWKG952TG",
-                # "name": "Default Sales Channel",
             }
         ],
         "shipping_profile_id": "sp_01KC4H46N3H82S4C03309443MZ",
