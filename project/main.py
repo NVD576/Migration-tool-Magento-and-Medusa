@@ -27,9 +27,7 @@ from extractors.orders import extract_orders
 from transformers.product_transformer import transform_product
 
 from transformers.category_transformer import (
-
     transform_category_as_collection,
-
     transform_category_as_product_category,
 )
 from transformers.customer_transformer import transform_customer
@@ -42,7 +40,6 @@ from services.medusa_auth import get_medusa_token
 
 
 urllib3.disable_warnings(urllib3.exceptions.InsecureRequestWarning)
-
 
 
 def _configure_stdio():
@@ -61,7 +58,6 @@ def _configure_stdio():
         pass
 
 
-
 def _env(name: str):
 
     v = os.environ.get(name)
@@ -75,7 +71,6 @@ def _env(name: str):
     return v if v != "" else None
 
 
-
 def _env_bool(name: str):
 
     v = _env(name)
@@ -87,45 +82,30 @@ def _env_bool(name: str):
     return v.lower() in ("1", "true", "yes", "y", "on")
 
 
-
 def _parse_args():
 
     parser = argparse.ArgumentParser(description="Magento -> Medusa migration")
     parser.add_argument(
-
         "--entities",
-
         default="products,categories,customers,orders",
-
         help="Danh sách entity cần sync, ví dụ: products,categories,customers,orders",
     )
     parser.add_argument(
-
         "--limit",
-
         type=int,
-
         default=0,
-
         help="Giới hạn số lượng record mỗi entity (0 = không giới hạn)",
     )
     parser.add_argument(
-
         "--dry-run",
-
         action="store_true",
-
         help="Chỉ in payload (không gọi API create lên Medusa)",
     )
     parser.add_argument(
-
         "--finalize-orders",
-
         action="store_true",
-
         help="Sau khi tạo Draft Order, thử confirm để chuyển thành Order (nếu Medusa hỗ trợ).",
     )
-
 
     # Optional overrides (CLI) - nếu không truyền thì dùng env, nếu env không có thì dùng config.py
 
@@ -135,10 +115,13 @@ def _parse_args():
 
     parser.add_argument("--magento-admin-password", default=None)
 
-    parser.add_argument("--magento-verify-ssl", action="store_true", help="Bật verify SSL cho Magento")
+    parser.add_argument(
+        "--magento-verify-ssl", action="store_true", help="Bật verify SSL cho Magento"
+    )
 
-    parser.add_argument("--magento-insecure", action="store_true", help="Tắt verify SSL cho Magento")
-
+    parser.add_argument(
+        "--magento-insecure", action="store_true", help="Tắt verify SSL cho Magento"
+    )
 
     parser.add_argument("--medusa-base-url", default=None)
 
@@ -146,7 +129,6 @@ def _parse_args():
 
     parser.add_argument("--medusa-password", default=None)
     return parser.parse_args()
-
 
 
 def _limit_iter(items, limit: int):
@@ -157,11 +139,9 @@ def _limit_iter(items, limit: int):
     return items[:limit]
 
 
-
 def _is_http_status(err: Exception, status_code: int) -> bool:
 
     return f"{status_code} Client Error" in str(err)
-
 
 
 def _resp_text(resp):
@@ -175,7 +155,6 @@ def _resp_text(resp):
 
     except Exception:
         return ""
-
 
 
 def _resp_json_or_text(resp):
@@ -193,7 +172,6 @@ def _resp_json_or_text(resp):
         return _resp_text(resp)
 
 
-
 def _is_duplicate_http(resp) -> bool:
 
     if resp is None:
@@ -206,9 +184,9 @@ def _is_duplicate_http(resp) -> bool:
 
     txt = _resp_text(resp).lower()
 
-    return any(s in txt for s in ("already exists", "duplicate", "unique", "exists", "handle"))
-
-
+    return any(
+        s in txt for s in ("already exists", "duplicate", "unique", "exists", "handle")
+    )
 
 
 def _fetch_all_product_categories(medusa: MedusaConnector, page_limit: int = 50):
@@ -239,7 +217,6 @@ def _fetch_all_product_categories(medusa: MedusaConnector, page_limit: int = 50)
     return out
 
 
-
 def _fetch_all_variants(medusa: MedusaConnector, page_limit: int = 50):
 
     offset = 0
@@ -257,19 +234,16 @@ def _fetch_all_variants(medusa: MedusaConnector, page_limit: int = 50):
         res = medusa.list_products(limit=page_limit, offset=offset, expand="variants")
 
         products = res.get("products") or res.get("data") or []
-        
 
         if not products:
 
             break
-            
 
         for p in products:
 
             variants = p.get("variants") or []
 
             out.extend(variants)
-            
 
         offset += len(products)
 
@@ -283,25 +257,34 @@ def _fetch_all_variants(medusa: MedusaConnector, page_limit: int = 50):
     return out
 
 
-
 def main():
     _configure_stdio()
 
     args = _parse_args()
 
-    entities = {e.strip().lower() for e in (args.entities or "").split(",") if e.strip()}
-
+    entities = {
+        e.strip().lower() for e in (args.entities or "").split(",") if e.strip()
+    }
 
     magento_cfg = dict(MAGENTO)
 
     medusa_cfg = dict(MEDUSA)
 
+    magento_cfg["BASE_URL"] = (
+        args.magento_base_url or _env("MAGENTO_BASE_URL") or magento_cfg.get("BASE_URL")
+    )
 
-    magento_cfg["BASE_URL"] = args.magento_base_url or _env("MAGENTO_BASE_URL") or magento_cfg.get("BASE_URL")
+    magento_cfg["ADMIN_USERNAME"] = (
+        args.magento_admin_username
+        or _env("MAGENTO_ADMIN_USERNAME")
+        or magento_cfg.get("ADMIN_USERNAME")
+    )
 
-    magento_cfg["ADMIN_USERNAME"] = args.magento_admin_username or _env("MAGENTO_ADMIN_USERNAME") or magento_cfg.get("ADMIN_USERNAME")
-
-    magento_cfg["ADMIN_PASSWORD"] = args.magento_admin_password or _env("MAGENTO_ADMIN_PASSWORD") or magento_cfg.get("ADMIN_PASSWORD")
+    magento_cfg["ADMIN_PASSWORD"] = (
+        args.magento_admin_password
+        or _env("MAGENTO_ADMIN_PASSWORD")
+        or magento_cfg.get("ADMIN_PASSWORD")
+    )
 
     if args.magento_verify_ssl:
 
@@ -319,32 +302,34 @@ def main():
 
             magento_cfg["VERIFY_SSL"] = env_verify
 
+    medusa_cfg["BASE_URL"] = (
+        args.medusa_base_url or _env("MEDUSA_BASE_URL") or medusa_cfg.get("BASE_URL")
+    )
 
-    medusa_cfg["BASE_URL"] = args.medusa_base_url or _env("MEDUSA_BASE_URL") or medusa_cfg.get("BASE_URL")
+    medusa_cfg["EMAIL"] = (
+        args.medusa_email or _env("MEDUSA_EMAIL") or medusa_cfg.get("EMAIL")
+    )
 
-    medusa_cfg["EMAIL"] = args.medusa_email or _env("MEDUSA_EMAIL") or medusa_cfg.get("EMAIL")
+    medusa_cfg["PASSWORD"] = (
+        args.medusa_password or _env("MEDUSA_PASSWORD") or medusa_cfg.get("PASSWORD")
+    )
 
-    medusa_cfg["PASSWORD"] = args.medusa_password or _env("MEDUSA_PASSWORD") or medusa_cfg.get("PASSWORD")
+    print(
+        f"Magento base_url={magento_cfg.get('BASE_URL')} verify_ssl={magento_cfg.get('VERIFY_SSL')} user={magento_cfg.get('ADMIN_USERNAME')}"
+    )
 
+    print(
+        f"Medusa  base_url={medusa_cfg.get('BASE_URL')} email={medusa_cfg.get('EMAIL')}"
+    )
 
-    print(f"Magento base_url={magento_cfg.get('BASE_URL')} verify_ssl={magento_cfg.get('VERIFY_SSL')} user={magento_cfg.get('ADMIN_USERNAME')}")
-
-    print(f"Medusa  base_url={medusa_cfg.get('BASE_URL')} email={medusa_cfg.get('EMAIL')}")
-
-
-    print("🔐 Login Magento..."
-)
+    print("🔐 Login Magento...")
     try:
 
         magento_token = get_magento_token(
-
             magento_cfg["BASE_URL"],
-
             magento_cfg["ADMIN_USERNAME"],
-
             magento_cfg["ADMIN_PASSWORD"],
-
-            magento_cfg["VERIFY_SSL"]
+            magento_cfg["VERIFY_SSL"],
         )
 
     except requests.exceptions.RequestException as e:
@@ -353,33 +338,24 @@ def main():
 
         print(f"- base_url: {magento_cfg.get('BASE_URL')}")
 
-        print("- Gợi ý: kiểm tra Magento server/container có đang chạy không, đúng http/https + port chưa, và URL này mở được trên máy bạn.")
+        print(
+            "- Gợi ý: kiểm tra Magento server/container có đang chạy không, đúng http/https + port chưa, và URL này mở được trên máy bạn."
+        )
 
         print(f"- Chi tiết: {e}")
         return
 
-
     magento = MagentoConnector(
-
         base_url=magento_cfg["BASE_URL"],
-
         token=magento_token,
-
-        verify_ssl=magento_cfg["VERIFY_SSL"]
+        verify_ssl=magento_cfg["VERIFY_SSL"],
     )
 
-
-    print("🔐 Login Medusa..."
-)
+    print("🔐 Login Medusa...")
     try:
 
         medusa_token = get_medusa_token(
-
-            medusa_cfg["BASE_URL"],
-
-            medusa_cfg["EMAIL"],
-
-            medusa_cfg["PASSWORD"]
+            medusa_cfg["BASE_URL"], medusa_cfg["EMAIL"], medusa_cfg["PASSWORD"]
         )
 
     except requests.exceptions.RequestException as e:
@@ -388,24 +364,18 @@ def main():
 
         print(f"- base_url: {medusa_cfg.get('BASE_URL')}")
 
-        print("- Gợi ý: kiểm tra Medusa đang chạy (thường `http://localhost:9000`) và đúng email/password.")
+        print(
+            "- Gợi ý: kiểm tra Medusa đang chạy (thường `http://localhost:9000`) và đúng email/password."
+        )
 
         print(f"- Chi tiết: {e}")
         return
 
-
-    medusa = MedusaConnector(
-
-        base_url=medusa_cfg["BASE_URL"],
-
-        api_token=medusa_token
-    )
-
+    medusa = MedusaConnector(base_url=medusa_cfg["BASE_URL"], api_token=medusa_token)
 
     if "categories" in entities:
 
-        print("🗂️ Fetching categories from Magento..."
-)
+        print("🗂️ Fetching categories from Magento...")
         categories = extract_categories(magento)
 
         categories = _limit_iter(categories, args.limit)
@@ -413,20 +383,13 @@ def main():
         # Tạo cha trước (level nhỏ), rồi tới con
 
         categories_sorted = sorted(
-
             categories,
-
             key=lambda c: (
-
                 int(c.get("level") or 0),
-
                 int(c.get("position") or 0),
-
                 int(c.get("id") or 0),
-
             ),
         )
-
 
         # Load categories đã có trên Medusa để map theo handle
 
@@ -434,15 +397,17 @@ def main():
 
             existing = _fetch_all_product_categories(medusa)
 
-            handle_to_id = {c.get("handle"): c.get("id") for c in existing if c.get("handle") and c.get("id")}
+            handle_to_id = {
+                c.get("handle"): c.get("id")
+                for c in existing
+                if c.get("handle") and c.get("id")
+            }
 
         except Exception:
 
             handle_to_id = {}
 
-
         print(f"🚀 Migrating {len(categories_sorted)} categories...\n")
-
 
         mg_to_medusa = {}
 
@@ -450,20 +415,17 @@ def main():
 
         progress = True
 
-
         while pending and progress:
 
             progress = False
 
             next_pending = []
 
-
             for cat in pending:
 
                 mg_id = cat.get("id")
 
                 parent_mg_id = cat.get("parent_id")
-
 
                 # Magento root parent (thường id=1) => parent null
 
@@ -478,14 +440,13 @@ def main():
                         next_pending.append(cat)
                         continue
 
-
                 name = cat.get("name") or str(mg_id)
 
                 print(f"➡ Syncing category: {name}")
 
-
-                payload_pc = transform_category_as_product_category(cat, parent_category_id=parent_medusa_id)
-
+                payload_pc = transform_category_as_product_category(
+                    cat, parent_category_id=parent_medusa_id
+                )
 
                 if args.dry_run:
 
@@ -495,7 +456,6 @@ def main():
 
                     progress = True
                     continue
-
 
                 # Nếu đã có theo handle thì chỉ map lại để con bám theo được
 
@@ -508,14 +468,19 @@ def main():
                     progress = True
                     continue
 
-
                 try:
 
-                    res = medusa.create_product_category(payload_pc, idempotency_key=f"category:{mg_id}")
+                    res = medusa.create_product_category(
+                        payload_pc, idempotency_key=f"category:{mg_id}"
+                    )
 
-                    created = res.get("product_category") or res.get("productCategory") or res
+                    created = (
+                        res.get("product_category") or res.get("productCategory") or res
+                    )
 
-                    created_id = created.get("id") if isinstance(created, dict) else None
+                    created_id = (
+                        created.get("id") if isinstance(created, dict) else None
+                    )
 
                     if created_id:
 
@@ -536,13 +501,19 @@ def main():
 
                     if resp is not None and resp.status_code in (400, 422):
 
-                        print("❌ Tạo category thất bại (Bad Request). Bỏ qua category này.")
+                        print(
+                            "❌ Tạo category thất bại (Bad Request). Bỏ qua category này."
+                        )
 
                         print("Response từ Medusa:")
 
                         detail = _resp_json_or_text(resp)
 
-                        print(json.dumps(detail, ensure_ascii=False, indent=2) if isinstance(detail, (dict, list)) else str(detail))
+                        print(
+                            json.dumps(detail, ensure_ascii=False, indent=2)
+                            if isinstance(detail, (dict, list))
+                            else str(detail)
+                        )
 
                         print("Payload đã gửi:")
 
@@ -572,7 +543,11 @@ def main():
 
                             existing = _fetch_all_product_categories(medusa)
 
-                            handle_to_id = {c.get("handle"): c.get("id") for c in existing if c.get("handle") and c.get("id")}
+                            handle_to_id = {
+                                c.get("handle"): c.get("id")
+                                for c in existing
+                                if c.get("handle") and c.get("id")
+                            }
 
                             ex_id = handle_to_id.get(payload_pc.get("handle"))
 
@@ -588,25 +563,22 @@ def main():
                     else:
                         raise
 
-
             pending = next_pending
-
 
         if pending:
 
-            print(f"⚠️ Có {len(pending)} category chưa sync được do thiếu parent mapping.")
-
+            print(
+                f"⚠️ Có {len(pending)} category chưa sync được do thiếu parent mapping."
+            )
 
     if "customers" in entities:
 
-        print("👤 Fetching customers from Magento..."
-)
+        print("👤 Fetching customers from Magento...")
         customers = extract_customers(magento)
 
         customers = _limit_iter(customers, args.limit)
 
         print(f"🚀 Migrating {len(customers)} customers...\n")
-
 
         for c in customers:
 
@@ -617,14 +589,12 @@ def main():
 
             print(f"➡ Syncing customer: {email}")
 
-
             payload = transform_customer(c)
 
             if args.dry_run:
 
                 print(json.dumps(payload, ensure_ascii=False, indent=2))
                 continue
-
 
             try:
 
@@ -636,13 +606,9 @@ def main():
 
                 status = resp.status_code if resp is not None else None
 
-
                 if _is_duplicate_http(resp):
                     print(" Customer đã tồn tại (Duplicate). Bỏ qua customer này.")
                     continue
-
-
-                # Với 400/422: in chi tiết để biết Medusa đang chê field nào, rồi tiếp tục customer khác
 
                 if status in (400, 422):
 
@@ -652,14 +618,19 @@ def main():
 
                     except Exception:
 
-                        detail = (resp.text if resp is not None else str(e))
+                        detail = resp.text if resp is not None else str(e)
 
-
-                    print("❌ Tạo customer thất bại (Bad Request). Bỏ qua customer này.")
+                    print(
+                        "❌ Tạo customer thất bại (Bad Request). Bỏ qua customer này."
+                    )
 
                     print("Response từ Medusa:")
 
-                    print(json.dumps(detail, ensure_ascii=False, indent=2) if isinstance(detail, (dict, list)) else str(detail))
+                    print(
+                        json.dumps(detail, ensure_ascii=False, indent=2)
+                        if isinstance(detail, (dict, list))
+                        else str(detail)
+                    )
 
                     print("Payload đã gửi:")
 
@@ -674,17 +645,14 @@ def main():
                     continue
                 raise
 
-
     if "orders" in entities:
 
-        print("🧾 Fetching orders from Magento..."
-)
+        print("🧾 Fetching orders from Magento...")
         orders = extract_orders(magento)
 
         orders = _limit_iter(orders, args.limit)
 
         print(f"🚀 Migrating {len(orders)} orders...\n")
-
 
         region_id = None
 
@@ -702,17 +670,17 @@ def main():
 
             region_id = None
 
-
         if not region_id:
 
-            print("⚠️ Không lấy được region_id từ Medusa (/admin/regions). Bỏ qua orders.")
+            print(
+                "⚠️ Không lấy được region_id từ Medusa (/admin/regions). Bỏ qua orders."
+            )
 
         else:
 
             # Load variants để map SKU -> variant_id
 
-            print("🔍 Fetching existing variants from Medusa..."
-)
+            print("🔍 Fetching existing variants from Medusa...")
             all_variants = _fetch_all_variants(medusa)
 
             sku_map = {}
@@ -725,11 +693,9 @@ def main():
 
             print(f"✅ Found {len(sku_map)} variants for mapping.\n")
 
-
             # Fetch shipping options (fetch all, pick first valid)
 
-            print(f"🚚 Fetching shipping options (any)..."
-)
+            print(f"🚚 Fetching shipping options (any)...")
             shipping_option = None
 
             try:
@@ -745,14 +711,13 @@ def main():
                     so = so_items[0]
 
                     shipping_option = {
-
                         "id": so.get("id"),
-
-                        "name": so.get("name") or "Standard Shipping"
-
+                        "name": so.get("name") or "Standard Shipping",
                     }
 
-                    print(f"✅ Using shipping option: {shipping_option['id']} ({shipping_option['name']})")
+                    print(
+                        f"✅ Using shipping option: {shipping_option['id']} ({shipping_option['name']})"
+                    )
 
                 else:
 
@@ -762,13 +727,11 @@ def main():
 
                 print(f"⚠️ Failed to fetch shipping options: {e}")
 
-
             for o in orders:
 
                 inc = o.get("increment_id") or o.get("entity_id")
 
                 print(f"➡ Syncing order: {inc}")
-
 
                 payload = transform_order(o, region_id, sku_map, shipping_option)
 
@@ -777,15 +740,15 @@ def main():
                     print(json.dumps(payload, ensure_ascii=False, indent=2))
                     continue
 
-
                 try:
 
-                    res = medusa.create_draft_order(payload, idempotency_key=f"order:{inc}")
+                    res = medusa.create_draft_order(
+                        payload, idempotency_key=f"order:{inc}"
+                    )
 
                     draft = res.get("draft_order") or res.get("draftOrder") or res
 
                     draft_id = draft.get("id") if isinstance(draft, dict) else None
-
 
                     # Finalize luôn chạy vì default=True
 
@@ -797,7 +760,9 @@ def main():
 
                             if finalized is None:
 
-                                print(f"⚠️ Draft Order {draft_id} created. Finalize not supported/returned empty.")
+                                print(
+                                    f"⚠️ Draft Order {draft_id} created. Finalize not supported/returned empty."
+                                )
 
                             else:
 
@@ -805,13 +770,17 @@ def main():
 
                         except requests.exceptions.HTTPError as fe:
 
-                            print(f"⚠️ Draft Order {draft_id} created, but Finalize failed.")
+                            print(
+                                f"⚠️ Draft Order {draft_id} created, but Finalize failed."
+                            )
 
                             # 500 server error = crash inventory
 
                             if fe.response.status_code == 500:
 
-                                print("   (Server Error 500 during finalize. Likely an inventory bug in Medusa. Order saved as Draft.)")
+                                print(
+                                    "   (Server Error 500 during finalize. Likely an inventory bug in Medusa. Order saved as Draft.)"
+                                )
 
                             else:
 
@@ -822,7 +791,6 @@ def main():
                     else:
 
                         print("✅ Created Draft Order (unknown ID)")
-
 
                 except requests.exceptions.HTTPError as e:
 
@@ -848,41 +816,31 @@ def main():
                 except Exception:
                     raise
 
-
     if "products" in entities:
 
-        print("📦 Fetching products from Magento..."
-)
+        print("📦 Fetching products from Magento...")
         products = extract_products(magento)
 
         products = _limit_iter(products, args.limit)
 
-
         print(f"🚀 Migrating {len(products)} products...\n")
-
 
         for product in products:
 
             print(f"➡ Syncing: {product['name']}")
 
-
-            payload = transform_product(
-
-                product,
-
-                magento_cfg["BASE_URL"]
-            )
-
+            payload = transform_product(product, magento_cfg["BASE_URL"])
 
             if args.dry_run:
 
                 print(json.dumps(payload, ensure_ascii=False, indent=2))
                 continue
 
-
             try:
 
-                medusa.create_product(payload, idempotency_key=f"product:{ product.get('id')}")
+                medusa.create_product(
+                    payload, idempotency_key=f"product:{ product.get('id')}"
+                )
 
             except requests.exceptions.HTTPError as e:
 
@@ -897,7 +855,11 @@ def main():
 
                     detail = _resp_json_or_text(resp)
 
-                    print(json.dumps(detail, ensure_ascii=False, indent=2) if isinstance(detail, (dict, list)) else str(detail))
+                    print(
+                        json.dumps(detail, ensure_ascii=False, indent=2)
+                        if isinstance(detail, (dict, list))
+                        else str(detail)
+                    )
 
                     print("Payload đã gửi:")
 
@@ -911,11 +873,8 @@ def main():
                     continue
                 raise
 
-
     print("\n✅ Migration completed!")
-
 
 
 if __name__ == "__main__":
     main()
-
