@@ -68,7 +68,7 @@ class MigrationGUI(tk.Tk):
         self.var_dry_run = tk.BooleanVar(value=False)
         tk.Checkbutton(opts_box, text="Dry-run (chỉ in payload)", variable=self.var_dry_run).grid(row=1, column=0, columnspan=2, sticky="w", padx=10, pady=(2, 10))
         self.var_finalize_orders = tk.BooleanVar(value=True)
-        # tk.Checkbutton(opts_box, text="Finalize orders (Draft -> Order nếu Medusa hỗ trợ)", variable=self.var_finalize_orders).grid(row=2, column=0, columnspan=2, sticky="w", padx=10, pady=(0, 10))
+        tk.Checkbutton(opts_box, text="Finalize orders (Draft -> Order)", variable=self.var_finalize_orders).grid(row=2, column=0, columnspan=2, sticky="w", padx=10, pady=(0, 10))
 
         cfg = tk.Frame(self)
         cfg.pack(fill="x", padx=12, pady=(0, 6))

@@ -739,71 +739,45 @@ def main():
                     continue
 
                 try:
-
                     res = medusa.create_draft_order(
                         payload, idempotency_key=f"order:{inc}"
                     )
-
                     draft = res.get("draft_order") or res.get("draftOrder") or res
-
                     draft_id = draft.get("id") if isinstance(draft, dict) else None
 
                     # Finalize luôn chạy vì default=True
-
                     if draft_id:
-
                         try:
-
                             finalized = medusa.finalize_draft_order(draft_id)
-
                             if finalized is None:
-
-                                print(
-                                    f"⚠️ Draft Order {draft_id} created. Finalize not supported/returned empty."
-                                )
-
+                                print(f"⚠️ Draft Order {draft_id} created. Finalize not supported/returned empty.")
                             else:
-
                                 print(f"✅ Finalized Order from Draft: {draft_id}")
 
                         except requests.exceptions.HTTPError as fe:
-
-                            print(
-                                f"⚠️ Draft Order {draft_id} created, but Finalize failed."
-                            )
-
+                            print(f"⚠️ Draft Order {draft_id} created, but Finalize failed.")
                             # 500 server error = crash inventory
-
                             if fe.response.status_code == 500:
-
-                                print(
-                                    "   (Server Error 500 during finalize. Likely an inventory bug in Medusa. Order saved as Draft.)"
-                                )
-
+                                print("   (Server Error 500 during finalize. Likely an inventory bug in Medusa. Order saved as Draft.)")
                             else:
-
                                 print(f"   Status: {fe.response.status_code}")
-
                                 print(fe.response.text)
-
                     else:
-
                         print("✅ Created Draft Order (unknown ID)")
 
                 except requests.exceptions.HTTPError as e:
-
                     resp = getattr(e, "response", None)
-
                     if _is_duplicate_http(resp):
                         continue
+
 
                     if resp is not None and resp.status_code in (400, 422):
 
                         print(" Tạo Draft Order thay vì Order.")
 
-                        # detail = _resp_json_or_text(resp)
+                        detail = _resp_json_or_text(resp)
 
-                        # print(json.dumps(detail, ensure_ascii=False, indent=2) if isinstance(detail, (dict, list)) else str(detail))
+                        print(json.dumps(detail, ensure_ascii=False, indent=2) if isinstance(detail, (dict, list)) else str(detail))
 
                         # print("Payload đã gửi:")
 

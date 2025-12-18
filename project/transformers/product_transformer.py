@@ -65,12 +65,13 @@ def transform_product(mg_product, magento_base_url):
             {
                 "title": "Default variant",
                 "manage_inventory": False,
+                "sku": mg_product.get("sku"),
                 "options": {
                     "Default": "Default"
                 },
                 "prices": [
                     {
-                        "currency_code": "usd",
+                        "currency_code": "eur",
                         "amount": price
                     }
                 ]
