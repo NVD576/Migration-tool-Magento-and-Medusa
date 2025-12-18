@@ -38,7 +38,7 @@ def extract_images(mg_product, magento_base_url):
     return images
 
 
-def transform_product(mg_product, magento_base_url):
+def transform_product(mg_product, magento_base_url, categories=None):
     name = mg_product["name"]
     price = int(float(mg_product["price"]) )
     handle = _handle_from_magento_product(mg_product)
@@ -53,6 +53,8 @@ def transform_product(mg_product, magento_base_url):
             "magento_id": mg_product.get("id"),
             "magento_sku": mg_product.get("sku"),
         },
+
+        "categories": categories or [],
 
         "options": [
             {

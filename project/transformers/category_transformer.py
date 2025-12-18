@@ -20,15 +20,11 @@ def transform_category_as_product_category(mg_category: dict, parent_category_id
     name = mg_category.get("name") or f"Category {mg_category.get('id')}"
     handle = _slugify(name) or f"category-{mg_category.get('id')}"
 
-    return {
+    payload = {
         "name": name,
         "handle": handle,
         "is_active": bool(mg_category.get("is_active", True)),
-        "is_internal": False,
-        "description": "",
         "rank": int(mg_category.get("position") or 0),
-        # Medusa dùng parent_category_id để tạo cây
-        "parent_category_id": parent_category_id,
         "metadata": {
             "magento_id": mg_category.get("id"),
             "magento_parent_id": mg_category.get("parent_id"),
@@ -36,6 +32,15 @@ def transform_category_as_product_category(mg_category: dict, parent_category_id
             "magento_position": mg_category.get("position"),
         },
     }
+
+    if parent_category_id:
+        payload["parent_category_id"] = parent_category_id
+    
+    description = mg_category.get("description")
+    if description:
+        payload["description"] = description
+
+    return payload
 
 
 def transform_category_as_collection(mg_category: dict) -> dict:

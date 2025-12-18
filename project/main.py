@@ -256,6 +256,15 @@ def _fetch_all_variants(medusa: MedusaConnector, page_limit: int = 50):
             break
     return out
 
+def _fetch_all_magento_categories(magento: MagentoConnector):
+    # Fetch all categories from Magento to build ID -> Data map
+    print("   Please wait, fetching all Magento categories for mapping...")
+    all_cats = extract_categories(magento)
+    cat_map = {c.get("id"): c for c in all_cats}
+    print(f"   Fetched {len(cat_map)} categories.")
+    return cat_map
+
+
 
 def main():
     _configure_stdio()
@@ -797,19 +806,86 @@ def main():
 
         print(f"🚀 Migrating {len(products)} products...\n")
 
-        for product in products:
+        if not "categories" in entities and products:
+             # Even if categories not in entities, we need them for product links
+             mg_category_map = _fetch_all_magento_categories(magento)
+             
+             if "mg_to_medusa" not in locals():
+                 mg_to_medusa = {}
 
+             # Also need existing medusa categories to update mg_to_medusa if not running full category sync
+             if not "categories" in entities: # If we didn't run category migration above
+                 existing = _fetch_all_product_categories(medusa)
+                 for c in existing:
+                     meta = c.get("metadata") or {}
+                     mg_id = meta.get("magento_id")
+                     if mg_id:
+                         mg_to_medusa[mg_id] = c.get("id")
+                         # Also try string/int version to be safe
+                         try:
+                             mg_to_medusa[int(mg_id)] = c.get("id")
+                             mg_to_medusa[str(mg_id)] = c.get("id")
+                         except:
+                             pass
+                     
+                     # Fallback: map by handle if metadata missing (legacy)
+                     elif c.get("handle"):
+                         # handle usually "slug-id", try to reverse or just skip. 
+                         # Better to rely on metadata. 
+                         pass
+        
+        # Ensure we have mg_to_medusa from previous step if categories were migrated
+        if "mg_to_medusa" not in locals():
+            mg_to_medusa = {}
+
+        for product in products:
             print(f"➡ Syncing: {product['name']}")
 
-            payload = transform_product(product, magento_cfg["BASE_URL"])
+            # Resolve Categories
+            product_categories = []
+            links = (product.get("extension_attributes") or {}).get("category_links") or []
+            
+            for link in links:
+                mg_cat_id = link.get("category_id")
+                # ignore root
+                if mg_cat_id in (1, "1"): 
+                    continue
+
+                medusa_cat_id = mg_to_medusa.get(mg_cat_id)
+                
+                # If not mapped, try to create it on the fly
+                if not medusa_cat_id:
+                     mg_cat = mg_category_map.get(str(mg_cat_id)) or mg_category_map.get(int(mg_cat_id))
+                     if mg_cat:
+                         print(f"   ⚠️ Category {mg_cat_id} not mapped. Creating on-the-fly...")
+                         
+                         name = mg_cat.get("name")
+                         payload_pc = transform_category_as_product_category(mg_cat, parent_category_id=None)
+                         
+                         try:
+                             res = medusa.create_product_category(payload_pc, idempotency_key=f"category:{mg_cat_id}")
+                             created = res.get("product_category") or res.get("productCategory") or res
+                             medusa_cat_id = created.get("id")
+                             if medusa_cat_id:
+                                 mg_to_medusa[mg_cat_id] = medusa_cat_id
+                                 print(f"   ✅ Created missing category: {name} ({medusa_cat_id})")
+                         except requests.exceptions.HTTPError as he:
+                             print(f"   ❌ Failed to auto-create category {mg_cat_id}: {he}")
+                             if he.response is not None:
+                                 print(f"   Response: {he.response.text}")
+                         except Exception as e:
+                             print(f"   ❌ Failed to auto-create category {mg_cat_id}: {e}")
+                
+                if medusa_cat_id:
+                    product_categories.append({"id": medusa_cat_id})
+
+            payload = transform_product(product, magento_cfg["BASE_URL"], categories=product_categories)
 
             if args.dry_run:
-
                 print(json.dumps(payload, ensure_ascii=False, indent=2))
                 continue
 
             try:
-
                 medusa.create_product(
                     payload, idempotency_key=f"product:{ product.get('id')}"
                 )
