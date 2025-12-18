@@ -6,7 +6,7 @@ class MagentoConnector(BaseConnector):
             "Authorization": f"Bearer {token}",
             "Content-Type": "application/json"
         }
-        super().__init__(base_url, headers,verify_ssl=verify_ssl)
+        super().__init__(base_url, headers, verify_ssl=verify_ssl)
 
     def get_products(self, page=1, page_size=20):
         endpoint = f"rest/V1/products?searchCriteria[currentPage]={page}&searchCriteria[pageSize]={page_size}"

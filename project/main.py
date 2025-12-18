@@ -323,27 +323,26 @@ def main():
     )
 
     print("🔐 Login Magento...")
-    try:
+    magento_token = _env("MAGENTO_TOKEN")
+    if magento_token:
+        print("   (Using cached token from env)")
+    else:
+        try:
+            magento_token = get_magento_token(
+                magento_cfg["BASE_URL"],
+                magento_cfg["ADMIN_USERNAME"],
+                magento_cfg["ADMIN_PASSWORD"],
+                magento_cfg["VERIFY_SSL"],
+            )
+        except requests.exceptions.RequestException as e:
+            print("\n❌ Không kết nối được Magento.")
+            print(f"- base_url: {magento_cfg.get('BASE_URL')}")
+            print(
+                "- Gợi ý: kiểm tra Magento server/container có đang chạy không, đúng http/https + port chưa, và URL này mở được trên máy bạn."
+            )
+            print(f"- Chi tiết: {e}")
+            return
 
-        magento_token = get_magento_token(
-            magento_cfg["BASE_URL"],
-            magento_cfg["ADMIN_USERNAME"],
-            magento_cfg["ADMIN_PASSWORD"],
-            magento_cfg["VERIFY_SSL"],
-        )
-
-    except requests.exceptions.RequestException as e:
-
-        print("\n❌ Không kết nối được Magento.")
-
-        print(f"- base_url: {magento_cfg.get('BASE_URL')}")
-
-        print(
-            "- Gợi ý: kiểm tra Magento server/container có đang chạy không, đúng http/https + port chưa, và URL này mở được trên máy bạn."
-        )
-
-        print(f"- Chi tiết: {e}")
-        return
 
     magento = MagentoConnector(
         base_url=magento_cfg["BASE_URL"],
@@ -352,24 +351,23 @@ def main():
     )
 
     print("🔐 Login Medusa...")
-    try:
+    medusa_token = _env("MEDUSA_TOKEN")
+    if medusa_token:
+        print("   (Using cached token from env)")
+    else:
+        try:
+            medusa_token = get_medusa_token(
+                medusa_cfg["BASE_URL"], medusa_cfg["EMAIL"], medusa_cfg["PASSWORD"]
+            )
+        except requests.exceptions.RequestException as e:
+            print("\n❌ Không kết nối được Medusa.")
+            print(f"- base_url: {medusa_cfg.get('BASE_URL')}")
+            print(
+                "- Gợi ý: kiểm tra Medusa đang chạy (thường `http://localhost:9000`) và đúng email/password."
+            )
+            print(f"- Chi tiết: {e}")
+            return
 
-        medusa_token = get_medusa_token(
-            medusa_cfg["BASE_URL"], medusa_cfg["EMAIL"], medusa_cfg["PASSWORD"]
-        )
-
-    except requests.exceptions.RequestException as e:
-
-        print("\n❌ Không kết nối được Medusa.")
-
-        print(f"- base_url: {medusa_cfg.get('BASE_URL')}")
-
-        print(
-            "- Gợi ý: kiểm tra Medusa đang chạy (thường `http://localhost:9000`) và đúng email/password."
-        )
-
-        print(f"- Chi tiết: {e}")
-        return
 
     medusa = MedusaConnector(base_url=medusa_cfg["BASE_URL"], api_token=medusa_token)
 

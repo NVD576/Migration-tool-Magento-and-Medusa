@@ -75,8 +75,6 @@ def transform_order(mg_order: dict, region_id: str, sku_map: dict = None, shippi
 
     items = []
 
-    custom_items = []
-
 
     for it in mg_order.get("items", []) or []:
 
@@ -105,104 +103,59 @@ def transform_order(mg_order: dict, region_id: str, sku_map: dict = None, shippi
 
 
         if variant_id:
-
             items.append({
-
                 "variant_id": variant_id,
-
                 "quantity": quantity,
-
                 "unit_price": unit_price,
-
                 "metadata": {
-
                     "magento_sku": sku,
-
                     "magento_item_id": it.get("item_id"),
-
                 },
-
             })
-
         else:
-
-            custom_items.append(
-
-                {
-
-                    "title": title,
-
-                    "unit_price": unit_price,
-
-                    "quantity": quantity,
-
-                    "metadata": {
-
-                        "magento_sku": sku,
-
-                        "magento_item_id": it.get("item_id"),
-
-                    },
-
-                }
-            )
+            # Nếu không tìm thấy variant, thêm vào items như là custom item (không có variant_id)
+            items.append({
+                "title": title,
+                "unit_price": unit_price,
+                "quantity": quantity,
+                "metadata": {
+                    "magento_sku": sku,
+                    "magento_item_id": it.get("item_id"),
+                },
+            })
 
 
     billing_address = _transform_address(mg_order.get("billing_address") or {})
 
 
     # Magento không luôn có shipping_address trực tiếp; cố gắng lấy từ extension_attributes trước.
-
     shipping_address = {}
-
     ext = mg_order.get("extension_attributes") or {}
-
     shipping_assignments = ext.get("shipping_assignments") or []
-
     if shipping_assignments and isinstance(shipping_assignments, list):
-
         sa0 = shipping_assignments[0] or {}
-
         shipping = (sa0.get("shipping") or {})
-
         shipping_address = _transform_address(shipping.get("address") or {})
 
 
     # Add shipping methods if available
-
     shipping_methods = []
-
     if shipping_option:
-
         # Get shipping amount from Magento order
-
         shipping_amount = _to_cents(mg_order.get("shipping_amount") or 0)
-
         shipping_methods.append({
-
             "shipping_option_id": shipping_option.get("id"),
-
             "amount": shipping_amount,
-
             "name": shipping_option.get("name") # Required by Medusa
-
         })
 
 
     payload = {
-
         "email": email,
-
         "region_id": region_id,
-
         "items": items,
-
-        "custom_items": custom_items,
-
         "billing_address": billing_address or None,
-
         "shipping_address": shipping_address or None,
-
         "shipping_methods": shipping_methods,
 
         "metadata": {

@@ -68,33 +68,7 @@ class MedusaConnector(BaseConnector):
         return self._request("POST", endpoint, json=order, headers=headers)
 
     def finalize_draft_order(self, draft_order_id):
-        """
-        Thử chuyển Draft Order -> Order theo nhiều route tuỳ version Medusa.
-        Trả về JSON response nếu thành công, hoặc None nếu không có route nào hỗ trợ.
-        """
-        candidates = [
-            # Medusa (một số version UI dùng route này)
-            f"admin/draft-orders/{draft_order_id}/convert-to-order",
-            f"admin/draft-orders/{draft_order_id}/confirm",
-            f"admin/draft-orders/{draft_order_id}/complete",
-            f"admin/draft-orders/{draft_order_id}/pay",
-            f"admin/draft-orders/{draft_order_id}/mark-paid",
-        ]
-
-        last_err = None
-        for endpoint in candidates:
-            try:
-                return self._request("POST", endpoint, json={})
-            except requests.exceptions.HTTPError as e:
-                resp = getattr(e, "response", None)
-                status = resp.status_code if resp is not None else None
-                # 404/405: route không tồn tại / method không cho phép => thử route khác
-                if status in (404, 405):
-                    last_err = e
-                    continue
-                raise
-
-        # Không route nào support
-        _ = last_err
-        return None
+        # Endpoint chính xác cho Medusa v2 (trigger workflow convert-draft-order)
+        endpoint = f"admin/draft-orders/{draft_order_id}/convert-to-order"
+        return self._request("POST", endpoint, json={})
 

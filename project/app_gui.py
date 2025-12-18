@@ -14,6 +14,10 @@ except Exception:
     CFG_MAGENTO = {}
     CFG_MEDUSA = {}
 
+from services.magento_auth import get_magento_token
+from services.medusa_auth import get_medusa_token
+
+
 
 class MigrationGUI(tk.Tk):
     def __init__(self):
@@ -24,6 +28,10 @@ class MigrationGUI(tk.Tk):
         self._proc = None
         self._q = queue.Queue()
         self._reader_thread = None
+
+        self.cached_magento_token = None
+        self.cached_medusa_token = None
+
 
         self._build_ui()
         self.after(80, self._drain_queue)
@@ -144,31 +152,39 @@ class MigrationGUI(tk.Tk):
 
     def _test_magento(self):
         base_url = (self.var_magento_base_url.get() or "").strip().rstrip("/")
+        user = (self.var_magento_user.get() or "").strip()
+        pwd = (self.var_magento_pass.get() or "").strip()
+        verify = bool(self.var_magento_verify.get())
+
         if not base_url:
             messagebox.showerror("Thiếu base_url", "Magento Base URL đang trống.")
             return
-        verify = bool(self.var_magento_verify.get())
+
         try:
-            # Chỉ test kết nối TCP/HTTP cơ bản (không cần token)
-            r = requests.get(base_url, timeout=6, verify=verify, allow_redirects=True)
-            messagebox.showinfo("Magento", f"Kết nối OK.\nURL: {base_url}\nHTTP {r.status_code}")
+            token = get_magento_token(base_url, user, pwd, verify)
+            self.cached_magento_token = token
+            messagebox.showinfo("Magento", "Login OK!\nToken đã được lưu cache cho lần chạy này.")
         except Exception as e:
-            messagebox.showerror("Magento", f"Không kết nối được.\nURL: {base_url}\nLỗi: {e}")
+            self.cached_magento_token = None
+            messagebox.showerror("Magento", f"Login thất bại.\nLỗi: {e}")
+
 
     def _test_medusa(self):
         base_url = (self.var_medusa_base_url.get() or "").strip().rstrip("/")
+        email = (self.var_medusa_email.get() or "").strip()
+        pwd = (self.var_medusa_pass.get() or "").strip()
+
         if not base_url:
             messagebox.showerror("Thiếu base_url", "Medusa Base URL đang trống.")
             return
         try:
-            # /health thường có, nếu không có thì fallback GET /
-            try:
-                r = requests.get(base_url + "/health", timeout=6)
-            except Exception:
-                r = requests.get(base_url, timeout=6, allow_redirects=True)
-            messagebox.showinfo("Medusa", f"Kết nối OK.\nURL: {base_url}\nHTTP {r.status_code}")
+            token = get_medusa_token(base_url, email, pwd)
+            self.cached_medusa_token = token
+            messagebox.showinfo("Medusa", "Login OK!\nToken đã được lưu cache cho lần chạy này.")
         except Exception as e:
-            messagebox.showerror("Medusa", f"Không kết nối được.\nURL: {base_url}\nLỗi: {e}")
+            self.cached_medusa_token = None
+            messagebox.showerror("Medusa", f"Login thất bại.\nLỗi: {e}")
+
 
     def _run(self):
         if self._proc and self._proc.poll() is None:
@@ -210,6 +226,12 @@ class MigrationGUI(tk.Tk):
             env["MEDUSA_BASE_URL"] = (self.var_medusa_base_url.get() or "").strip()
             env["MEDUSA_EMAIL"] = (self.var_medusa_email.get() or "").strip()
             env["MEDUSA_PASSWORD"] = (self.var_medusa_pass.get() or "").strip()
+
+            if self.cached_magento_token:
+                env["MAGENTO_TOKEN"] = self.cached_magento_token
+            if self.cached_medusa_token:
+                env["MEDUSA_TOKEN"] = self.cached_medusa_token
+
 
             self._proc = subprocess.Popen(
                 cmd,
