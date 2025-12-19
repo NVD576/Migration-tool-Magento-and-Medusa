@@ -9,6 +9,14 @@ from migrators.utils import _limit_iter, _is_duplicate_http, _resp_json_or_text,
 def migrate_customers(magento: MagentoConnector, medusa: MedusaConnector, args):
     print("👤 Fetching customers from Magento...")
     customers = extract_customers(magento)
+    
+    # Filter by IDs if provided
+    customer_ids = None
+    if getattr(args, "customer_ids", None):
+        customer_ids = {x.strip() for x in str(args.customer_ids).split(",") if x.strip()}
+        print(f"   (Filter by IDs: {customer_ids})")
+        customers = [c for c in customers if str(c.get("id")) in customer_ids]
+    
     customers = _limit_iter(customers, args.limit)
     print(f"🚀 Migrating {len(customers)} customers...\n")
 
@@ -25,10 +33,11 @@ def migrate_customers(magento: MagentoConnector, medusa: MedusaConnector, args):
 
         try:
             medusa.create_customer(payload, idempotency_key=f"customer:{email}")
+            print(f"✅ Đã tạo customer: {email}")
         except requests.exceptions.HTTPError as e:
             resp = getattr(e, "response", None)
             if _is_duplicate_http(resp):
-                print(" Customer đã tồn tại (Duplicate). Bỏ qua customer này.")
+                print(f"ℹ️  Customer {email} đã tồn tại, bỏ qua")
                 continue
 
             status = resp.status_code if resp is not None else None

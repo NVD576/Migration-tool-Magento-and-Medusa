@@ -7,6 +7,8 @@ import tkinter as tk
 from tkinter import messagebox
 from tkinter.scrolledtext import ScrolledText
 import requests
+import warnings
+import logging
 
 try:
     from config import MAGENTO as CFG_MAGENTO, MEDUSA as CFG_MEDUSA
@@ -17,6 +19,135 @@ except Exception:
 from services.magento_auth import get_magento_token
 from services.medusa_auth import get_medusa_token
 
+
+
+class SelectionDialog(tk.Toplevel):
+    def __init__(self, parent, title, items, initial_selection=None):
+        super().__init__(parent)
+        self.title(title)
+        self.geometry("600x500")
+        self.items = items # list of dict: {'id': ..., 'label': ...}
+        self.selected_ids = set(initial_selection or [])
+        self.vars = {}
+        
+        self.result = None
+        
+        self._build_ui()
+        self._populate()
+
+    def _build_ui(self):
+        # Search bar
+        top = tk.Frame(self)
+        top.pack(fill="x", padx=10, pady=10)
+        tk.Label(top, text="Tìm kiếm:").pack(side="left")
+        self.var_search = tk.StringVar()
+        self.var_search.trace("w", self._on_search)
+        tk.Entry(top, textvariable=self.var_search).pack(side="left", fill="x", expand=True, padx=5)
+
+        # Buttons
+        btn_frame = tk.Frame(self)
+        btn_frame.pack(side="bottom", fill="x", padx=10, pady=10)
+        tk.Button(btn_frame, text="OK", width=10, command=self._on_ok).pack(side="right", padx=5)
+        tk.Button(btn_frame, text="Cancel", width=10, command=self.destroy).pack(side="right", padx=5)
+        
+        # Selection controls
+        sel_frame = tk.Frame(self)
+        sel_frame.pack(side="bottom", fill="x", padx=10, pady=(0, 5))
+        tk.Button(sel_frame, text="Chọn tất cả", command=self._select_all).pack(side="left")
+        tk.Button(sel_frame, text="Bỏ chọn tất cả", command=self._deselect_all).pack(side="left", padx=5)
+
+        # List area with scrollbar
+        self.canvas = tk.Canvas(self)
+        self.scrollbar = tk.Scrollbar(self, orient="vertical", command=self.canvas.yview)
+        self.scrollable_frame = tk.Frame(self.canvas)
+
+        self.scrollable_frame.bind(
+            "<Configure>",
+            lambda e: self.canvas.configure(scrollregion=self.canvas.bbox("all"))
+        )
+
+        self.canvas.create_window((0, 0), window=self.scrollable_frame, anchor="nw")
+        self.canvas.configure(yscrollcommand=self.scrollbar.set)
+
+        self.canvas.pack(side="left", fill="both", expand=True, padx=10)
+        self.scrollbar.pack(side="right", fill="y")
+        
+        # Mousewheel - bind to canvas specifically, not all widgets
+        self.canvas.bind("<Enter>", lambda e: self.canvas.bind_all("<MouseWheel>", self._on_mousewheel))
+        self.canvas.bind("<Leave>", lambda e: self.canvas.unbind_all("<MouseWheel>"))
+        
+        # Ensure cleanup on destroy
+        self.protocol("WM_DELETE_WINDOW", self._on_close)
+
+    def _on_close(self):
+        # Unbind mousewheel before destroying
+        try:
+            self.canvas.unbind_all("<MouseWheel>")
+        except:
+            pass
+        self.destroy()
+
+    def _on_mousewheel(self, event):
+        try:
+            self.canvas.yview_scroll(int(-1*(event.delta/120)), "units")
+        except:
+            # Canvas might be destroyed, ignore
+            pass
+
+    def _populate(self, filter_text=None):
+        for widget in self.scrollable_frame.winfo_children():
+            widget.destroy()
+        
+        self.vars = {}
+        row = 0
+        
+        filter_text = filter_text.lower() if filter_text else None
+
+        # Limit to show only first 200 items to avoid lag if too many, 
+        # but filtering allows finding them.
+        count = 0
+        for item in self.items:
+            label = item.get('label', '')
+            if filter_text and filter_text not in label.lower():
+                continue
+            
+            count += 1
+            if count > 300:
+                tk.Label(self.scrollable_frame, text="... (Dùng tìm kiếm để lọc thêm) ...", fg="gray").grid(row=row, column=0, sticky="w", padx=5)
+                break
+                
+            iid = str(item['id'])
+            var = tk.BooleanVar(value=(iid in self.selected_ids))
+            self.vars[iid] = var
+            
+            # Checkbutton
+            cb = tk.Checkbutton(self.scrollable_frame, text=label, variable=var,
+                                command=lambda i=iid, v=var: self._toggle(i, v))
+            cb.grid(row=row, column=0, sticky="w", padx=5, pady=2)
+            row += 1
+
+    def _toggle(self, iid, var):
+        if var.get():
+            self.selected_ids.add(iid)
+        else:
+            self.selected_ids.discard(iid)
+
+    def _on_search(self, *args):
+        self._populate(self.var_search.get())
+    
+    def _select_all(self):
+        for iid in self.vars:
+            self.vars[iid].set(True)
+            self.selected_ids.add(iid)
+            
+    def _deselect_all(self):
+        for iid in self.vars:
+            self.vars[iid].set(False)
+            self.selected_ids.discard(iid)
+
+    def _on_ok(self):
+        self.result = list(self.selected_ids)
+        self._on_close()
 
 
 class MigrationGUI(tk.Tk):
@@ -31,10 +162,24 @@ class MigrationGUI(tk.Tk):
 
         self.cached_magento_token = None
         self.cached_medusa_token = None
-
+        
+        # Data caching
+        self.cached_products = None
+        self.cached_categories = None
+        self.cached_orders = None
+        self.cached_customers = None
 
         self._build_ui()
+        self._setup_logging()
         self.after(80, self._drain_queue)
+    
+    def _setup_logging(self):
+        # Redirect Python warnings to log
+        def warning_handler(message, category, filename, lineno, file=None, line=None):
+            warning_msg = f"⚠️ Warning: {category.__name__}: {message}\n"
+            self._log(warning_msg)
+        
+        warnings.showwarning = warning_handler
 
     def _build_ui(self):
         top = tk.Frame(self)
@@ -58,6 +203,30 @@ class MigrationGUI(tk.Tk):
         tk.Button(btns, text="Chọn tất cả", command=self._select_all).pack(side="left")
         tk.Button(btns, text="Bỏ chọn tất cả", command=self._select_none).pack(side="left", padx=(8, 0))
 
+        # Filter Box
+        filter_box = tk.LabelFrame(top, text="Lọc theo ID (phân cách bằng dấu phẩy)")
+        filter_box.pack(side="left", fill="x", expand=True, padx=(0, 10))
+        
+        tk.Label(filter_box, text="Product IDs:").grid(row=0, column=0, sticky="w", padx=10, pady=(8, 4))
+        self.var_product_ids = tk.StringVar()
+        tk.Entry(filter_box, textvariable=self.var_product_ids, width=20).grid(row=0, column=1, sticky="w", padx=10, pady=(8, 4))
+        tk.Button(filter_box, text="Chọn...", command=self._open_product_selector).grid(row=0, column=2, padx=5)
+        
+        tk.Label(filter_box, text="Category IDs:").grid(row=1, column=0, sticky="w", padx=10, pady=4)
+        self.var_category_ids = tk.StringVar()
+        tk.Entry(filter_box, textvariable=self.var_category_ids, width=20).grid(row=1, column=1, sticky="w", padx=10, pady=4)
+        tk.Button(filter_box, text="Chọn...", command=self._open_category_selector).grid(row=1, column=2, padx=5)
+        
+        tk.Label(filter_box, text="Customer IDs:").grid(row=2, column=0, sticky="w", padx=10, pady=4)
+        self.var_customer_ids = tk.StringVar()
+        tk.Entry(filter_box, textvariable=self.var_customer_ids, width=20).grid(row=2, column=1, sticky="w", padx=10, pady=4)
+        tk.Button(filter_box, text="Chọn...", command=self._open_customer_selector).grid(row=2, column=2, padx=5)
+        
+        tk.Label(filter_box, text="Order IDs:").grid(row=3, column=0, sticky="w", padx=10, pady=4)
+        self.var_order_ids = tk.StringVar()
+        tk.Entry(filter_box, textvariable=self.var_order_ids, width=20).grid(row=3, column=1, sticky="w", padx=10, pady=(4, 10))
+        tk.Button(filter_box, text="Chọn...", command=self._open_order_selector).grid(row=3, column=2, padx=5, pady=(0, 5))
+
         opts_box = tk.LabelFrame(top, text="Tuỳ chọn")
         opts_box.pack(side="left", fill="x")
 
@@ -70,8 +239,18 @@ class MigrationGUI(tk.Tk):
         self.var_finalize_orders = tk.BooleanVar(value=True)
         tk.Checkbutton(opts_box, text="Finalize orders (Draft -> Order)", variable=self.var_finalize_orders).grid(row=2, column=0, columnspan=2, sticky="w", padx=10, pady=(0, 10))
 
-        cfg = tk.Frame(self)
-        cfg.pack(fill="x", padx=12, pady=(0, 6))
+        # Collapsible config section
+        cfg_container = tk.Frame(self)
+        cfg_container.pack(fill="x", padx=12, pady=(0, 6))
+        
+        self.cfg_visible = tk.BooleanVar(value=False)
+        cfg_toggle_btn = tk.Button(cfg_container, text="▼ Hiện cấu hình", command=self._toggle_config)
+        cfg_toggle_btn.pack(anchor="w")
+        
+        self.cfg_frame = tk.Frame(cfg_container)
+        # Initially hidden
+        
+        cfg = self.cfg_frame
 
         mag_box = tk.LabelFrame(cfg, text="Cấu hình Magento (mặc định lấy từ config.py)")
         mag_box.pack(side="left", fill="x", expand=True, padx=(0, 10))
@@ -150,6 +329,334 @@ class MigrationGUI(tk.Tk):
             entities.append("orders")
         return entities
 
+    def _toggle_config(self):
+        if self.cfg_visible.get():
+            # Hide config
+            self.cfg_frame.pack_forget()
+            self.cfg_visible.set(False)
+            # Update button text (find the button)
+            for widget in self.cfg_frame.master.winfo_children():
+                if isinstance(widget, tk.Button):
+                    widget.config(text="▼ Hiện cấu hình")
+                    break
+        else:
+            # Show config
+            self.cfg_frame.pack(fill="x", pady=5)
+            self.cfg_visible.set(True)
+            for widget in self.cfg_frame.master.winfo_children():
+                if isinstance(widget, tk.Button):
+                    widget.config(text="▲ Ẩn cấu hình")
+                    break
+
+    def _get_magento_client(self):
+        base_url = (self.var_magento_base_url.get() or "").strip().rstrip("/")
+        user = (self.var_magento_user.get() or "").strip()
+        pwd = (self.var_magento_pass.get() or "").strip()
+        verify = bool(self.var_magento_verify.get())
+        
+        if not base_url or not user:
+            messagebox.showerror("Lỗi", "Vui lòng nhập cấu hình Magento trước.")
+            return None
+
+        from connectors.magento_connector import MagentoConnector
+        
+        # Use cached token if possible
+        token = self.cached_magento_token
+        if not token:
+            try:
+                token = get_magento_token(base_url, user, pwd, verify)
+                self.cached_magento_token = token
+            except Exception as e:
+                error_msg = f"❌ Lỗi Login Magento: {str(e)}\n"
+                self._log(error_msg)
+                messagebox.showerror("Lỗi Login Magento", str(e))
+                return None
+        
+        return MagentoConnector(base_url, token, verify)
+
+    def _open_product_selector(self):
+        # Use cached data if available
+        if self.cached_products:
+            initial = [x.strip() for x in self.var_product_ids.get().split(",") if x.strip()]
+            dlg = SelectionDialog(self, "Chọn sản phẩm", self.cached_products, initial_selection=initial)
+            self.wait_window(dlg)
+            if dlg.result is not None:
+                self.var_product_ids.set(", ".join(dlg.result))
+            return
+        
+        client = self._get_magento_client()
+        if not client: return
+        
+        # Loading popup
+        loading = tk.Toplevel(self)
+        loading.title("Đang tải...")
+        loading.geometry("300x100")
+        tk.Label(loading, text="Đang tải danh sách sản phẩm từ Magento...\n(Có thể mất vài giây)", padx=20, pady=20).pack()
+        loading.transient(self)
+        loading.grab_set()
+        
+        result_queue = queue.Queue()
+
+        def worker():
+            try:
+                page = 1
+                items = []
+                while True:
+                    # Fetch only id,name,sku for speed
+                    res = client.get_products(page=page, page_size=100, fields="items[id,name,sku]")
+                    chunk = res.get('items', [])
+                    if not chunk: break
+                    
+                    for p in chunk:
+                        items.append({
+                            'id': p.get('id'),
+                            'label': f"[{p.get('id')}] {p.get('sku')} - {p.get('name')}"
+                        })
+                    
+                    page += 1
+                    if page > 20: break # Increased limit to 2000
+                result_queue.put(items)
+            except Exception as e:
+                result_queue.put(e)
+
+        threading.Thread(target=worker, daemon=True).start()
+
+        def check_result():
+            try:
+                res = result_queue.get_nowait()
+                loading.destroy()
+                
+                if isinstance(res, Exception):
+                    error_msg = f"❌ Không lấy được danh sách sản phẩm: {res}\n"
+                    self._log(error_msg)
+                    messagebox.showerror("Lỗi", f"Không lấy được danh sách sản phẩm: {res}")
+                else:
+                    # Cache the result
+                    self.cached_products = res
+                    initial = [x.strip() for x in self.var_product_ids.get().split(",") if x.strip()]
+                    dlg = SelectionDialog(self, "Chọn sản phẩm", res, initial_selection=initial)
+                    self.wait_window(dlg)
+                    
+                    if dlg.result is not None:
+                        self.var_product_ids.set(", ".join(dlg.result))
+            except queue.Empty:
+                self.after(100, check_result)
+
+        check_result()
+
+
+    def _open_category_selector(self):
+        # Use cached data if available
+        if self.cached_categories:
+            initial = [x.strip() for x in self.var_category_ids.get().split(",") if x.strip()]
+            dlg = SelectionDialog(self, "Chọn danh mục", self.cached_categories, initial_selection=initial)
+            self.wait_window(dlg)
+            if dlg.result is not None:
+                self.var_category_ids.set(", ".join(dlg.result))
+            return
+            
+        client = self._get_magento_client()
+        if not client: return
+        
+        # Loading popup
+        loading = tk.Toplevel(self)
+        loading.title("Đang tải...")
+        loading.geometry("300x100")
+        tk.Label(loading, text="Đang tải danh sách danh mục từ Magento...\n(Có thể mất vài giây)", padx=20, pady=20).pack()
+        loading.transient(self)
+        loading.grab_set()
+        
+        result_queue = queue.Queue()
+
+        def worker():
+            try:
+                res = client.get_categories(page=1, page_size=1000, fields="items[id,name,level,parent_id]")
+                chunk = res.get('items', [])
+                
+                items = []
+                for c in chunk:
+                    # Indent name by level
+                    level = int(c.get('level') or 0)
+                    indent = "--" * max(0, level - 1)
+                    items.append({
+                        'id': c.get('id'),
+                        'label': f"{indent} [{c.get('id')}] {c.get('name')}"
+                    })
+                result_queue.put(items)
+            except Exception as e:
+                result_queue.put(e)
+
+        threading.Thread(target=worker, daemon=True).start()
+
+        def check_result():
+            try:
+                res = result_queue.get_nowait()
+                loading.destroy()
+                
+                if isinstance(res, Exception):
+                    error_msg = f"❌ Không lấy được danh sách danh mục: {res}\n"
+                    self._log(error_msg)
+                    messagebox.showerror("Lỗi", f"Không lấy được danh sách danh mục: {res}")
+                else:
+                    # Cache the result
+                    self.cached_categories = res
+                    initial = [x.strip() for x in self.var_category_ids.get().split(",") if x.strip()]
+                    dlg = SelectionDialog(self, "Chọn danh mục", res, initial_selection=initial)
+                    self.wait_window(dlg)
+                    
+                    if dlg.result is not None:
+                        self.var_category_ids.set(", ".join(dlg.result))
+            except queue.Empty:
+                self.after(100, check_result)
+
+        check_result()
+
+    def _open_customer_selector(self):
+        # Use cached data if available
+        if self.cached_customers:
+            initial = [x.strip() for x in self.var_customer_ids.get().split(",") if x.strip()]
+            dlg = SelectionDialog(self, "Chọn khách hàng", self.cached_customers, initial_selection=initial)
+            self.wait_window(dlg)
+            if dlg.result is not None:
+                self.var_customer_ids.set(", ".join(dlg.result))
+            return
+            
+        client = self._get_magento_client()
+        if not client: return
+        
+        # Loading popup
+        loading = tk.Toplevel(self)
+        loading.title("Đang tải...")
+        loading.geometry("300x100")
+        tk.Label(loading, text="Đang tải danh sách khách hàng từ Magento...\n(Có thể mất vài giây)", padx=20, pady=20).pack()
+        loading.transient(self)
+        loading.grab_set()
+        
+        result_queue = queue.Queue()
+
+        def worker():
+            try:
+                page = 1
+                items = []
+                while True:
+                    res = client.get_customers(page=page, page_size=100)
+                    chunk = res.get('items', [])
+                    if not chunk: break
+                    
+                    for c in chunk:
+                        cid = c.get('id')
+                        email = c.get('email')
+                        fname = c.get('firstname') or ''
+                        lname = c.get('lastname') or ''
+                        items.append({
+                            'id': cid,
+                            'label': f"[{cid}] {fname} {lname} - {email}"
+                        })
+                    
+                    page += 1
+                    if page > 10: break  # Limit 1000 customers
+                result_queue.put(items)
+            except Exception as e:
+                result_queue.put(e)
+
+        threading.Thread(target=worker, daemon=True).start()
+
+        def check_result():
+            try:
+                res = result_queue.get_nowait()
+                loading.destroy()
+                
+                if isinstance(res, Exception):
+                    error_msg = f"❌ Không lấy được danh sách khách hàng: {res}\n"
+                    self._log(error_msg)
+                    messagebox.showerror("Lỗi", f"Không lấy được danh sách khách hàng: {res}")
+                else:
+                    # Cache the result
+                    self.cached_customers = res
+                    initial = [x.strip() for x in self.var_customer_ids.get().split(",") if x.strip()]
+                    dlg = SelectionDialog(self, "Chọn khách hàng", res, initial_selection=initial)
+                    self.wait_window(dlg)
+                    
+                    if dlg.result is not None:
+                        self.var_customer_ids.set(", ".join(dlg.result))
+            except queue.Empty:
+                self.after(100, check_result)
+
+        check_result()
+        
+    def _open_order_selector(self):
+        # Use cached data if available
+        if self.cached_orders:
+            initial = [x.strip() for x in self.var_order_ids.get().split(",") if x.strip()]
+            dlg = SelectionDialog(self, "Chọn đơn hàng", self.cached_orders, initial_selection=initial)
+            self.wait_window(dlg)
+            if dlg.result is not None:
+                self.var_order_ids.set(", ".join(dlg.result))
+            return
+            
+        client = self._get_magento_client()
+        if not client: return
+        
+        # Loading popup
+        loading = tk.Toplevel(self)
+        loading.title("Đang tải...")
+        loading.geometry("300x100")
+        tk.Label(loading, text="Đang tải danh sách đơn hàng từ Magento...\n(Có thể mất vài giây)", padx=20, pady=20).pack()
+        loading.transient(self)
+        loading.grab_set()
+        
+        result_queue = queue.Queue()
+
+        def worker():
+            try:
+                page = 1
+                items = []
+                while True:
+                    res = client.get_orders(page=page, page_size=50)
+                    chunk = res.get('items', [])
+                    if not chunk: break
+                    
+                    for o in chunk:
+                        oid = o.get('entity_id')
+                        inc = o.get('increment_id')
+                        total = o.get('grand_total')
+                        items.append({
+                            'id': oid,
+                            'label': f"[{oid}] Order #{inc} - ${total:.2f}" if total else f"[{oid}] Order #{inc}"
+                        })
+                    
+                    page += 1
+                    if page > 10: break  # Limit 500 orders
+                result_queue.put(items)
+            except Exception as e:
+                result_queue.put(e)
+
+        threading.Thread(target=worker, daemon=True).start()
+
+        def check_result():
+            try:
+                res = result_queue.get_nowait()
+                loading.destroy()
+                
+                if isinstance(res, Exception):
+                    error_msg = f"❌ Không lấy được danh sách đơn hàng: {res}\n"
+                    self._log(error_msg)
+                    messagebox.showerror("Lỗi", f"Không lấy được danh sách đơn hàng: {res}")
+                else:
+                    # Cache the result
+                    self.cached_orders = res
+                    initial = [x.strip() for x in self.var_order_ids.get().split(",") if x.strip()]
+                    dlg = SelectionDialog(self, "Chọn đơn hàng", res, initial_selection=initial)
+                    self.wait_window(dlg)
+                    
+                    if dlg.result is not None:
+                        self.var_order_ids.set(", ".join(dlg.result))
+            except queue.Empty:
+                self.after(100, check_result)
+
+        check_result()
+
+
     def _test_magento(self):
         base_url = (self.var_magento_base_url.get() or "").strip().rstrip("/")
         user = (self.var_magento_user.get() or "").strip()
@@ -163,9 +670,12 @@ class MigrationGUI(tk.Tk):
         try:
             token = get_magento_token(base_url, user, pwd, verify)
             self.cached_magento_token = token
+            self._log("✅ Magento Login OK! Token đã được lưu cache.\n")
             messagebox.showinfo("Magento", "Login OK!\nToken đã được lưu cache cho lần chạy này.")
         except Exception as e:
             self.cached_magento_token = None
+            error_msg = f"❌ Magento Login thất bại: {e}\n"
+            self._log(error_msg)
             messagebox.showerror("Magento", f"Login thất bại.\nLỗi: {e}")
 
 
@@ -180,9 +690,12 @@ class MigrationGUI(tk.Tk):
         try:
             token = get_medusa_token(base_url, email, pwd)
             self.cached_medusa_token = token
+            self._log("✅ Medusa Login OK! Token đã được lưu cache.\n")
             messagebox.showinfo("Medusa", "Login OK!\nToken đã được lưu cache cho lần chạy này.")
         except Exception as e:
             self.cached_medusa_token = None
+            error_msg = f"❌ Medusa Login thất bại: {e}\n"
+            self._log(error_msg)
             messagebox.showerror("Medusa", f"Login thất bại.\nLỗi: {e}")
 
 
@@ -209,8 +722,24 @@ class MigrationGUI(tk.Tk):
             cmd += ["--limit", str(limit)]
         if self.var_dry_run.get():
             cmd += ["--dry-run"]
-        # if self.var_finalize_orders.get():
-        #     cmd += ["--finalize-orders"]
+        if self.var_finalize_orders.get():
+            cmd += ["--finalize-orders"]
+
+        p_ids = self.var_product_ids.get().strip()
+        if p_ids:
+            cmd += ["--product-ids", p_ids]
+            
+        c_ids = self.var_category_ids.get().strip()
+        if c_ids:
+            cmd += ["--category-ids", c_ids]
+            
+        cust_ids = self.var_customer_ids.get().strip()
+        if cust_ids:
+            cmd += ["--customer-ids", cust_ids]
+            
+        ord_ids = self.var_order_ids.get().strip()
+        if ord_ids:
+            cmd += ["--order-ids", ord_ids]
 
         self._clear_log()
         self._log("Command:\n  " + " ".join(cmd) + "\n")

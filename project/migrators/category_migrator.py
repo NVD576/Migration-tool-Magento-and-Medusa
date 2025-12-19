@@ -18,6 +18,15 @@ from migrators.utils import (
 def migrate_categories(magento: MagentoConnector, medusa: MedusaConnector, args):
     print("🗂️ Fetching categories from Magento...")
     categories = extract_categories(magento)
+    
+    # Filter by IDs if provided
+    cat_ids = None
+    if getattr(args, "category_ids", None):
+        cat_ids = {x.strip() for x in str(args.category_ids).split(",") if x.strip()}
+        print(f"   (Filter by IDs: {cat_ids})")
+        # Ensure we filter by string comparison as API might return ints
+        categories = [c for c in categories if str(c.get("id")) in cat_ids]
+
     categories = _limit_iter(categories, args.limit)
 
     categories_sorted = sorted(
@@ -75,6 +84,7 @@ def migrate_categories(magento: MagentoConnector, medusa: MedusaConnector, args)
 
             existing_id = handle_to_id.get(payload_pc.get("handle"))
             if existing_id:
+                print(f"ℹ️  Category '{name}' đã tồn tại, bỏ qua")
                 mg_to_medusa[mg_id] = existing_id
                 progress = True
                 continue
@@ -88,11 +98,13 @@ def migrate_categories(magento: MagentoConnector, medusa: MedusaConnector, args)
                 if created_id:
                     mg_to_medusa[mg_id] = created_id
                     handle_to_id[payload_pc.get("handle")] = created_id
+                    print(f"✅ Đã tạo category: {name}")
                 progress = True
 
             except requests.exceptions.HTTPError as e:
                 resp = getattr(e, "response", None)
                 if _is_duplicate_http(resp):
+                    print(f"ℹ️  Category '{name}' đã tồn tại, bỏ qua")
                     progress = True
                     continue
 

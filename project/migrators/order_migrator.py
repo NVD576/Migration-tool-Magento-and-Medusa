@@ -9,6 +9,14 @@ from migrators.utils import _limit_iter, _fetch_all_variants, _is_duplicate_http
 def migrate_orders(magento: MagentoConnector, medusa: MedusaConnector, args):
     print("🧾 Fetching orders from Magento...")
     orders = extract_orders(magento)
+    
+    # Filter by IDs if provided
+    order_ids = None
+    if getattr(args, "order_ids", None):
+        order_ids = {x.strip() for x in str(args.order_ids).split(",") if x.strip()}
+        print(f"   (Filter by IDs: {order_ids})")
+        orders = [o for o in orders if str(o.get("entity_id")) in order_ids or str(o.get("increment_id")) in order_ids]
+    
     orders = _limit_iter(orders, args.limit)
     print(f"🚀 Migrating {len(orders)} orders...\n")
 
@@ -68,8 +76,8 @@ def migrate_orders(magento: MagentoConnector, medusa: MedusaConnector, args):
             draft = res.get("draft_order") or res.get("draftOrder") or res
             draft_id = draft.get("id") if isinstance(draft, dict) else None
 
-            # 2. Finalize
-            if draft_id:
+            # 2. Finalize (only if requested)
+            if draft_id and getattr(args, 'finalize_orders', False):
                 try:
                     finalized = medusa.finalize_draft_order(draft_id)
                     if finalized is None:
@@ -91,12 +99,15 @@ def migrate_orders(magento: MagentoConnector, medusa: MedusaConnector, args):
                     else:
                          print(f"   Status: {fe.response.status_code}")
                          print(fe.response.text)
+            elif draft_id:
+                print(f"✅ Created Draft Order: {draft_id} (Not finalized)")
             else:
                 print("✅ Created Draft Order (unknown ID)")
 
         except requests.exceptions.HTTPError as e:
             resp = getattr(e, "response", None)
             if _is_duplicate_http(resp):
+                print(f"ℹ️  Order {inc} đã tồn tại, bỏ qua")
                 continue
             if resp is not None and resp.status_code in (400, 422):
                 print(" Tạo Draft Order thất bại (Bad Request).")

@@ -64,6 +64,11 @@ def _parse_args():
         help="Sau khi tạo Draft Order, thử confirm để chuyển thành Order (nếu Medusa hỗ trợ).",
     )
     
+    parser.add_argument("--product-ids", default=None, help="Comma separated list of product IDs to sync")
+    parser.add_argument("--category-ids", default=None, help="Comma separated list of category IDs to sync")
+    parser.add_argument("--order-ids", default=None, help="Comma separated list of order IDs to sync")
+    parser.add_argument("--customer-ids", default=None, help="Comma separated list of customer IDs to sync")
+    
     # CLI overrides
     parser.add_argument("--magento-base-url", default=None)
     parser.add_argument("--magento-admin-username", default=None)

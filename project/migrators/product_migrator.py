@@ -17,7 +17,14 @@ def _fetch_all_magento_categories(magento: MagentoConnector):
 
 def migrate_products(magento: MagentoConnector, medusa: MedusaConnector, args, mg_to_medusa_map=None):
     print("📦 Fetching products from Magento...")
-    products = extract_products(magento)
+    
+    # Parse product_ids from args
+    p_ids = None
+    if getattr(args, "product_ids", None):
+        p_ids = [x.strip() for x in str(args.product_ids).split(",") if x.strip()]
+        print(f"   (Filter by IDs: {p_ids})")
+
+    products = extract_products(magento, ids=p_ids)
     products = _limit_iter(products, args.limit)
     print(f"🚀 Migrating {len(products)} products...\n")
 
@@ -84,9 +91,11 @@ def migrate_products(magento: MagentoConnector, medusa: MedusaConnector, args, m
 
         try:
             medusa.create_product(payload, idempotency_key=f"product:{product.get('id')}")
+            print("✅ Đã tạo sản phẩm")
         except requests.exceptions.HTTPError as e:
             resp = getattr(e, "response", None)
             if _is_duplicate_http(resp):
+                print("ℹ️  Sản phẩm đã tồn tại, bỏ qua")
                 continue
             if resp is not None and resp.status_code in (400, 422):
                 print("❌ Tạo product thất bại (Bad Request).")
