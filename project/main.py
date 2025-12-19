@@ -4,6 +4,12 @@ import sys
 import os
 import requests
 
+from typing import cast
+from io import TextIOWrapper
+
+stdout = cast(TextIOWrapper, sys.stdout)
+stderr = cast(TextIOWrapper, sys.stderr)
+
 from config import MAGENTO, MEDUSA
 from connectors.magento_connector import MagentoConnector
 from connectors.medusa_connector import MedusaConnector
@@ -21,9 +27,9 @@ urllib3.disable_warnings(urllib3.exceptions.InsecureRequestWarning)
 def _configure_stdio():
     try:
         if hasattr(sys.stdout, "reconfigure"):
-            sys.stdout.reconfigure(encoding="utf-8", errors="replace")
+            stdout.reconfigure(encoding="utf-8", errors="replace")
         if hasattr(sys.stderr, "reconfigure"):
-            sys.stderr.reconfigure(encoding="utf-8", errors="replace")
+            stderr.reconfigure(encoding="utf-8", errors="replace")
     except Exception:
         pass
 
@@ -102,9 +108,9 @@ def main():
         if env_verify is not None:
             magento_cfg["VERIFY_SSL"] = env_verify
 
-    medusa_cfg["BASE_URL"] = args.medusa_base_url or _env("MEDUSA_BASE_URL") or medusa_cfg.get("BASE_URL")
-    medusa_cfg["EMAIL"] = args.medusa_email or _env("MEDUSA_EMAIL") or medusa_cfg.get("EMAIL")
-    medusa_cfg["PASSWORD"] = args.medusa_password or _env("MEDUSA_PASSWORD") or medusa_cfg.get("PASSWORD")
+    medusa_cfg["BASE_URL"] = args.medusa_base_url or _env("MEDUSA_BASE_URL") or medusa_cfg.get("BASE_URL") or ""
+    medusa_cfg["EMAIL"] = args.medusa_email or _env("MEDUSA_EMAIL") or medusa_cfg.get("EMAIL") or ""
+    medusa_cfg["PASSWORD"] = args.medusa_password or _env("MEDUSA_PASSWORD") or medusa_cfg.get("PASSWORD") or ""
 
     print(f"Magento base_url={magento_cfg.get('BASE_URL')} verify_ssl={magento_cfg.get('VERIFY_SSL')} user={magento_cfg.get('ADMIN_USERNAME')}")
     print(f"Medusa  base_url={medusa_cfg.get('BASE_URL')} email={medusa_cfg.get('EMAIL')}")
