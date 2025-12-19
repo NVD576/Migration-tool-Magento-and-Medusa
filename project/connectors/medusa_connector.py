@@ -57,6 +57,18 @@ class MedusaConnector(BaseConnector):
         params = {"limit": limit, "offset": offset}
         return self._request("GET", endpoint, params=params)
 
+    def get_sales_channels(self, limit=50, offset=0):
+        """Fetch all sales channels from Medusa"""
+        endpoint = "admin/sales-channels"
+        params = {"limit": limit, "offset": offset}
+        return self._request("GET", endpoint, params=params)
+
+    def get_shipping_profiles(self, limit=50, offset=0):
+        """Fetch all shipping profiles from Medusa"""
+        endpoint = "admin/shipping-profiles"
+        params = {"limit": limit, "offset": offset}
+        return self._request("GET", endpoint, params=params)
+
     def create_draft_order(self, draft_order, idempotency_key=None):
         endpoint = "admin/draft-orders"
         headers = self._headers_with_idempotency(idempotency_key)

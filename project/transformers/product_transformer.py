@@ -38,7 +38,7 @@ def extract_images(mg_product, magento_base_url):
     return images
 
 
-def transform_product(mg_product, magento_base_url, categories=None):
+def transform_product(mg_product, magento_base_url, categories=None, sales_channel_id=None, shipping_profile_id=None):
     name = mg_product["name"]
     price = int(float(mg_product["price"]) )
     handle = _handle_from_magento_product(mg_product)
@@ -49,6 +49,7 @@ def transform_product(mg_product, magento_base_url, categories=None):
         "description": name,
         "status": "published",
         "discountable": True,
+        "weight": mg_product.get("weight"),
         "metadata": {
             "magento_id": mg_product.get("id"),
             "magento_sku": mg_product.get("sku"),
@@ -82,10 +83,10 @@ def transform_product(mg_product, magento_base_url, categories=None):
 
         "sales_channels": [
             {
-                "id": "sc_01KC4H49PTBS2XBMJAWKG952TG",
+                "id": sales_channel_id or ""#"sc_01KC4H49PTBS2XBMJAWKG952TG",
             }
         ],
-        "shipping_profile_id": "sp_01KC4H46N3H82S4C03309443MZ",
+        "shipping_profile_id": shipping_profile_id or "" #"sp_01KC4H46N3H82S4C03309443MZ",
 
 
     }

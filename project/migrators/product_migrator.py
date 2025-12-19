@@ -31,6 +31,34 @@ def migrate_products(magento: MagentoConnector, medusa: MedusaConnector, args, m
     mg_to_medusa = mg_to_medusa_map if mg_to_medusa_map is not None else {}
     mg_category_map = None
 
+    # Fetch sales channel and shipping profile from Medusa
+    sales_channel_id = None
+    shipping_profile_id = None
+    
+    try:
+        print("🔧 Fetching sales channels from Medusa...")
+        sc_response = medusa.get_sales_channels()
+        sales_channels = sc_response.get("sales_channels", [])
+        if sales_channels:
+            sales_channel_id = sales_channels[0].get("id")
+            print(f"   ✅ Using sales channel: {sales_channels[0].get('name')} ({sales_channel_id})")
+        else:
+            print("   ⚠️  No sales channels found, using default")
+    except Exception as e:
+        print(f"   ⚠️  Failed to fetch sales channels: {e}. Using default.")
+    
+    try:
+        print("🔧 Fetching shipping profiles from Medusa...")
+        sp_response = medusa.get_shipping_profiles()
+        shipping_profiles = sp_response.get("shipping_profiles", [])
+        if shipping_profiles:
+            shipping_profile_id = shipping_profiles[0].get("id")
+            print(f"   ✅ Using shipping profile: {shipping_profiles[0].get('name')} ({shipping_profile_id})")
+        else:
+            print("   ⚠️  No shipping profiles found, using default")
+    except Exception as e:
+        print(f"   ⚠️  Failed to fetch shipping profiles: {e}. Using default.")
+
     if not mg_category_map:
         mg_category_map = _fetch_all_magento_categories(magento)
 
@@ -83,7 +111,13 @@ def migrate_products(magento: MagentoConnector, medusa: MedusaConnector, args, m
             if medusa_cat_id:
                 product_categories.append({"id": medusa_cat_id})
 
-        payload = transform_product(product, magento.base_url, categories=product_categories)
+        payload = transform_product(
+            product, 
+            magento.base_url, 
+            categories=product_categories,
+            sales_channel_id=sales_channel_id,
+            shipping_profile_id=shipping_profile_id
+        )
 
         if args.dry_run:
             print(json.dumps(payload, ensure_ascii=False, indent=2))
