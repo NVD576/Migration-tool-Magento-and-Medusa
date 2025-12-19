@@ -1,0 +1,452 @@
+
+metadata:
+  version: "1.0"
+  description: "Migrate products from Magento to Medusa with variants, prices, images, and categories"
+  author: "Migration Tool"
+
+source: magento
+target: medusa
+entity: product
+
+# Migration pipeline stages
+pipeline:
+  - extract     
+  - map        
+  - transform  
+  - validate   
+  - load      
+
+# =====================================================
+# FIELD MAPPINGS & TRANSFORMATIONS
+# =====================================================
+
+fields:
+  
+  # -------------------- Basic Info --------------------
+  
+  sku:
+    source: sku
+    target: variants[].sku
+    required: true
+    validation:
+      - not_null
+      - not_empty
+    description: "Product SKU - maps to variant SKU in Medusa"
+  
+  name:
+    source: name
+    target: title
+    required: true
+    validation:
+      - not_null
+      - not_empty
+    description: "Product name becomes product title"
+  
+  handle:
+    source: sku
+    target: handle
+    required: true
+    transform:
+      type: slugify
+      operations:
+        - normalize_unicode       
+        - lowercase
+        - replace_special_chars  
+        - remove_non_alphanumeric
+        - remove_duplicate_dashes
+        - trim_dashes
+    fallback:
+      source: name
+      transform: slugify
+    validation:
+      - not_empty
+      - unique
+    description: "URL-friendly handle generated from SKU or name"
+  
+  description:
+    source: custom_attributes.description
+    target: description
+    required: false
+    transform:
+      type: text
+      operations:
+        - strip_html
+        - trim
+        - normalize_whitespace
+    fallback:
+      source: name
+      transform: none
+    description: "Product description with HTML stripped"
+  
+  # -------------------- Status & Visibility --------------------
+  
+  status:
+    source: status
+    target: status
+    required: true
+    transform:
+      type: enum
+      mapping:
+        1: "published"    # Enabled in Magento
+        2: "draft"        # Disabled in Magento
+      default: "draft"
+    validation:
+      - enum: ["published", "draft"]
+    description: "Product status mapping"
+  
+  discountable:
+    source: null
+    target: discountable
+    default: true
+    description: "All products are discountable by default"
+  
+  # -------------------- Pricing --------------------
+  
+  price:
+    source: price
+    target: variants[].prices[].amount
+    required: true
+    transform:
+      type: numeric
+      operation: convert_to_integer  # Medusa uses integer for prices
+      precision: 0
+      scale: 1
+    validation:
+      - greater_than: 0
+      - is_numeric
+    metadata:
+      currency_code: "EUR"  # Matches your transformer: currency_code: "eur"
+    description: "Base price in euros (integer format, no cents conversion)"
+  
+  special_price:
+    source: custom_attributes.special_price
+    target: variants[].prices[].amount
+    required: false
+    transform:
+      type: numeric
+      operation: convert_to_integer
+    condition:
+      field: custom_attributes.special_price_from_date
+      operator: not_null
+    description: "Special/sale price if available"
+  
+  # -------------------- Inventory --------------------
+  
+  manage_inventory:
+    source: null
+    target: variants[].manage_inventory
+    default: false
+    description: "Inventory management disabled by default"
+  
+  inventory_quantity:
+    source: extension_attributes.stock_item.qty
+    target: variants[].inventory_quantity
+    required: false
+    transform:
+      type: integer
+      operation: round
+      min_value: 0
+    default: 0
+    validation:
+      - greater_than_or_equal: 0
+    description: "Stock quantity from Magento stock item"
+  
+  allow_backorder:
+    source: extension_attributes.stock_item.backorders
+    target: variants[].allow_backorder
+    required: false
+    transform:
+      type: boolean
+      mapping:
+        0: false    # No backorders
+        1: true     # Allow qty below 0
+        2: true     # Allow qty below 0 and notify customer
+      default: false
+    description: "Backorder configuration"
+  
+  # -------------------- Variant Configuration --------------------
+  
+  variant_title:
+    source: null
+    target: variants[].title
+    default: "Default variant"
+    description: "Default variant title"
+  
+  variant_options:
+    source: null
+    target: variants[].options
+    default:
+      Default: "Default"
+    description: "Default product options"
+  
+  product_options:
+    source: null
+    target: options[]
+    default:
+      - title: "Default"
+        values: ["Default"]
+    description: "Product option configuration"
+  
+  # -------------------- Images --------------------
+  
+  images:
+    source: media_gallery_entries[].file
+    target: images[].url
+    required: false
+    transform:
+      type: url
+      base_url: "{magento_base_url}/pub/media/catalog/product"
+      operations:
+        - ensure_leading_slash   # File path should start with /
+        - concatenate_base_url
+    validation:
+      - is_valid_url
+    description: "Product images from media gallery"
+  
+  image_position:
+    source: media_gallery_entries[].position
+    target: images[].metadata.position
+    required: false
+    transform:
+      type: integer
+    description: "Image display order"
+  
+  # -------------------- Categories & Collections --------------------
+  
+  categories:
+    source: category_links[].category_id
+    target: categories[].id
+    required: false
+    transform:
+      type: lookup
+      lookup_table: "{category_id_map}"   # Pre-built map from Magento ID to Medusa Category ID
+      fallback: "create_if_not_exists"
+    description: "Product categories - uses Medusa Product Categories"
+  
+  collections:
+    source: category_links[].category_id
+    target: collections[].id
+    required: false
+    transform:
+      type: lookup
+      lookup_table: "{collection_id_map}"
+    description: "Map categories to collections (alternative approach)"
+  
+  # -------------------- Metadata & Tracing --------------------
+  
+  metadata_magento_id:
+    source: id
+    target: metadata.magento_id
+    required: true
+    transform:
+      type: string
+    description: "Original Magento product ID for tracing"
+  
+  metadata_magento_sku:
+    source: sku
+    target: metadata.magento_sku
+    required: true
+    transform:
+      type: string
+    description: "Original Magento SKU for reference"
+  
+  metadata_type_id:
+    source: type_id
+    target: metadata.magento_type_id
+    required: false
+    description: "Magento product type (simple, configurable, bundle, etc.)"
+  
+  metadata_attribute_set_id:
+    source: attribute_set_id
+    target: metadata.magento_attribute_set_id
+    required: false
+    description: "Magento attribute set ID"
+  
+  metadata_created_at:
+    source: created_at
+    target: metadata.magento_created_at
+    required: false
+    description: "Original creation date in Magento"
+  
+  metadata_updated_at:
+    source: updated_at
+    target: metadata.magento_updated_at
+    required: false
+    description: "Last update date in Magento"
+  
+  # -------------------- Weight & Dimensions --------------------
+  
+  weight:
+    source: weight
+    target: variants[].weight
+    required: false
+    transform:
+      type: numeric
+      operation: multiply
+      value: 1  # Convert units if needed (e.g., kg to g)
+      precision: 2
+    validation:
+      - greater_than_or_equal: 0
+    description: "Product weight"
+  
+  length:
+    source: custom_attributes.ts_dimensions_length
+    target: variants[].length
+    required: false
+    transform:
+      type: numeric
+      precision: 2
+    description: "Product length for shipping"
+  
+  width:
+    source: custom_attributes.ts_dimensions_width
+    target: variants[].width
+    required: false
+    transform:
+      type: numeric
+      precision: 2
+    description: "Product width for shipping"
+  
+  height:
+    source: custom_attributes.ts_dimensions_height
+    target: variants[].height
+    required: false
+    transform:
+      type: numeric
+      precision: 2
+    description: "Product height for shipping"
+  
+  # -------------------- Sales Channel & Shipping --------------------
+  
+  sales_channels:
+    source: null
+    target: sales_channels[].id
+    default: "sc_01KC4H49PTBS2XBMJAWKG952TG"  # From your transformer
+    description: "Default sales channel assignment"
+  
+  shipping_profile_id:
+    source: null
+    target: shipping_profile_id
+    default: "sp_01KC4H46N3H82S4C03309443MZ"  # From your transformer
+    description: "Default shipping profile"
+
+# =====================================================
+# VALIDATION RULES
+# =====================================================
+
+validation_rules:
+  global:
+    - required_fields_not_null
+    - unique_sku_per_batch
+    - valid_price_format
+  
+  pre_transform:
+    - check_magento_id_exists
+    - check_sku_format
+  
+  post_transform:
+    - validate_handle_uniqueness
+    - validate_image_urls
+    - validate_category_references
+  
+  pre_load:
+    - check_medusa_category_exists
+    - check_sales_channel_exists
+    - check_shipping_profile_exists
+
+# =====================================================
+# TRANSFORMATION SETTINGS
+# =====================================================
+
+transform_settings:
+  slugify:
+    unicode_normalize: "NFKD"
+    remove_combining_chars: true
+    custom_replacements:
+      đ: "d"
+      Đ: "d"
+    allowed_chars: "a-z0-9-"
+    max_length: 255
+  
+  html_stripping:
+    allowed_tags: []
+    remove_scripts: true
+    remove_styles: true
+    decode_entities: true
+  
+  price_conversion:
+    input_format: "decimal"
+    output_format: "integer"
+    rounding: "round"  # round, floor, ceil
+    handle_null: "skip"
+
+# =====================================================
+# ERROR HANDLING
+# =====================================================
+
+error_handling:
+  on_validation_error:
+    action: "skip"  # skip, abort, log_and_continue
+    log_level: "error"
+  
+  on_transform_error:
+    action: "log_and_continue"
+    log_level: "warning"
+  
+  on_load_error:
+    action: "retry"
+    max_retries: 3
+    retry_delay_seconds: 2
+    log_level: "error"
+  
+  missing_required_field:
+    action: "abort"
+    log_level: "error"
+  
+  duplicate_handle:
+    action: "append_random_suffix"
+    log_level: "warning"
+
+# =====================================================
+# PERFORMANCE & BATCH SETTINGS
+# =====================================================
+
+batch_settings:
+  batch_size: 50
+  parallel_processing: true
+  max_workers: 4
+  rate_limit:
+    requests_per_second: 10
+    burst: 20
+
+# =====================================================
+# LOGGING & MONITORING
+# =====================================================
+
+logging:
+  enabled: true
+  level: "INFO"  # DEBUG, INFO, WARNING, ERROR
+  log_file: "logs/product_migration_{timestamp}.log"
+  console_output: true
+  
+  metrics:
+    - total_extracted
+    - total_transformed
+    - total_loaded
+    - total_errors
+    - total_skipped
+    - duration_seconds
+
+# =====================================================
+# POST-MIGRATION TASKS
+# =====================================================
+
+post_migration:
+  tasks:
+    - verify_product_count
+    - verify_image_accessibility
+    - verify_category_associations
+    - generate_migration_report
+  
+  rollback_on_failure: false
+  create_backup: true
