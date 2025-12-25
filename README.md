@@ -20,9 +20,10 @@ cd Migration-tool-Magento-and-Medusa
 ```
 
 1. Cài thư viện
-   pip install requests
 
-2. Chạy ứng dụng
+- pip install requests
+
+1. Chạy ứng dụng
 
 - Python:
 
