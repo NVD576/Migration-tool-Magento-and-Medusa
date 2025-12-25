@@ -33,12 +33,13 @@ python app_gui.py #giao diện chính
 
 
 ## Ghi chú
-Cài magento và medusa trước, cài bằng docker (cd vào từng thư mục Magento và Medusa)
+Cài Magento và Medusa trước nếu chưa có server
+# Magento
+- https://github.com/NVD576/Magento.git
+# MedusaJs
+- https://github.com/NVD576/Medusa.git
+
 Đọc trong từng thư mục để biết cách cài Magento và Medusa
-
-Sau khi cài xong thì trở lại root
-- Mở terminal chạy lệnh docker compose up -d --build
-
 
 ## License
 

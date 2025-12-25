@@ -1,0 +1,54 @@
+source: magento
+target: medusa
+entity: product
+
+pipeline:
+  - extract
+  - map
+  - transform
+  - validate
+  - load
+
+fields:
+  # Basic Information
+  sku: variants[].sku
+  name: title
+  handle: handle
+  description: name
+ 
+  # Pricing
+  price: variants[].prices[].amount
+  currency_code: variants[].prices[].currency_code
+ 
+  # Status
+  status: status
+  discountable: discountable
+ 
+  # Inventory
+  stock_quantity: variants[].inventory_quantity
+  manage_inventory: variants[].manage_inventory
+  allow_backorder: variants[].allow_backorder
+ 
+  weight: weight
+  images: images[].url
+
+defaults:
+  status: published
+  discountable: true
+  manage_inventory: false
+  currency_code: EUR
+  # Weight & Dimensions
+  # length: length
+  # width: width
+  # height: height
+ 
+  # Images
+ 
+  # Categories
+  # categories: categories[].id
+
+  # Sales Channel & Shipping
+  # sales_channel_id: sales_channels[].id
+  # shipping_profile_id: shipping_profile_id
+
+# Default Values

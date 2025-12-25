@@ -50,11 +50,11 @@ def transform_product(mg_product, magento_base_url, categories=None, sales_chann
         "status": "published",
         "discountable": True,
         "weight": mg_product.get("weight"),
-        "metadata": {
-            "magento_id": mg_product.get("id"),
-            "magento_sku": mg_product.get("sku"),
-        },
-
+        # "metadata": {
+        #     "magento_id": mg_product.get("id"),
+        #     "magento_sku": mg_product.get("sku"),
+        # },
+        #
         "categories": categories or [],
 
         "options": [
@@ -83,10 +83,10 @@ def transform_product(mg_product, magento_base_url, categories=None, sales_chann
 
         "sales_channels": [
             {
-                "id": sales_channel_id or ""#"sc_01KC4H49PTBS2XBMJAWKG952TG",
+                "id": sales_channel_id or ""                        #"sc_01KC4H49PTBS2XBMJAWKG952TG",
             }
         ],
-        "shipping_profile_id": shipping_profile_id or "" #"sp_01KC4H46N3H82S4C03309443MZ",
+        "shipping_profile_id": shipping_profile_id or ""            #"sp_01KC4H46N3H82S4C03309443MZ",
 
 
     }

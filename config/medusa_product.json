@@ -1,0 +1,859 @@
+{
+  "id": "prod_01KC4H49Z5R42GAXS5WNHZ9KQP",
+  "title": "Medusa T-Shirt",
+  "subtitle": null,
+  "status": "published",
+  "external_id": null,
+  "description": "Reimagine the feeling of a classic T-shirt. With our cotton T-shirts, everyday essentials no longer have to be ordinary.",
+  "handle": "t-shirt",
+  "is_giftcard": false,
+  "discountable": true,
+  "thumbnail": "https://medusa-public-images.s3.eu-west-1.amazonaws.com/tee-black-front.png",
+  "collection_id": null,
+  "type_id": null,
+  "weight": "400",
+  "length": null,
+  "height": null,
+  "width": null,
+  "hs_code": null,
+  "origin_country": null,
+  "mid_code": null,
+  "material": null,
+  "created_at": "2025-12-10T16:22:23.467Z",
+  "updated_at": "2025-12-10T16:22:23.467Z",
+  "deleted_at": null,
+  "metadata": null,
+  "type": null,
+  "collection": null,
+  "options": [
+    {
+      "id": "opt_01KC4H49Z8CY0K3DWTZW2CAT9Q",
+      "title": "Size",
+      "metadata": null,
+      "product_id": "prod_01KC4H49Z5R42GAXS5WNHZ9KQP",
+      "created_at": "2025-12-10T16:22:23.467Z",
+      "updated_at": "2025-12-10T16:22:23.467Z",
+      "deleted_at": null,
+      "values": [
+        {
+          "id": "optval_01KC4H49Z79YY84MQ7XWJFE58F",
+          "value": "S",
+          "metadata": null,
+          "option_id": "opt_01KC4H49Z8CY0K3DWTZW2CAT9Q",
+          "created_at": "2025-12-10T16:22:23.467Z",
+          "updated_at": "2025-12-10T16:22:23.467Z",
+          "deleted_at": null
+        },
+        {
+          "id": "optval_01KC4H49Z850KXQXGFJNJ8VWHR",
+          "value": "M",
+          "metadata": null,
+          "option_id": "opt_01KC4H49Z8CY0K3DWTZW2CAT9Q",
+          "created_at": "2025-12-10T16:22:23.467Z",
+          "updated_at": "2025-12-10T16:22:23.467Z",
+          "deleted_at": null
+        },
+        {
+          "id": "optval_01KC4H49Z8VBT9JHG9H9SB5GEM",
+          "value": "L",
+          "metadata": null,
+          "option_id": "opt_01KC4H49Z8CY0K3DWTZW2CAT9Q",
+          "created_at": "2025-12-10T16:22:23.467Z",
+          "updated_at": "2025-12-10T16:22:23.467Z",
+          "deleted_at": null
+        },
+        {
+          "id": "optval_01KC4H49Z84PGKZ9BWCTSHVWXY",
+          "value": "XL",
+          "metadata": null,
+          "option_id": "opt_01KC4H49Z8CY0K3DWTZW2CAT9Q",
+          "created_at": "2025-12-10T16:22:23.467Z",
+          "updated_at": "2025-12-10T16:22:23.467Z",
+          "deleted_at": null
+        }
+      ]
+    },
+    {
+      "id": "opt_01KC4H49Z8RKFKDFCGDPA20M96",
+      "title": "Color",
+      "metadata": null,
+      "product_id": "prod_01KC4H49Z5R42GAXS5WNHZ9KQP",
+      "created_at": "2025-12-10T16:22:23.467Z",
+      "updated_at": "2025-12-10T16:22:23.467Z",
+      "deleted_at": null,
+      "values": [
+        {
+          "id": "optval_01KC4H49Z8Z87FCP9B68WZK38Z",
+          "value": "Black",
+          "metadata": null,
+          "option_id": "opt_01KC4H49Z8RKFKDFCGDPA20M96",
+          "created_at": "2025-12-10T16:22:23.467Z",
+          "updated_at": "2025-12-10T16:22:23.467Z",
+          "deleted_at": null
+        },
+        {
+          "id": "optval_01KC4H49Z8XWVDSN28P1TH3WYM",
+          "value": "White",
+          "metadata": null,
+          "option_id": "opt_01KC4H49Z8RKFKDFCGDPA20M96",
+          "created_at": "2025-12-10T16:22:23.468Z",
+          "updated_at": "2025-12-10T16:22:23.468Z",
+          "deleted_at": null
+        }
+      ]
+    }
+  ],
+  "tags": [],
+  "images": [
+    {
+      "id": "img_01KC4H49Z8J6EKCT52VV42C50W",
+      "url": "https://medusa-public-images.s3.eu-west-1.amazonaws.com/tee-black-front.png",
+      "metadata": null,
+      "rank": 0,
+      "product_id": "prod_01KC4H49Z5R42GAXS5WNHZ9KQP",
+      "created_at": "2025-12-10T16:22:23.468Z",
+      "updated_at": "2025-12-10T16:22:23.468Z",
+      "deleted_at": null
+    },
+    {
+      "id": "img_01KC4H49Z99ZG0MN77TNBPQDWT",
+      "url": "https://medusa-public-images.s3.eu-west-1.amazonaws.com/tee-black-back.png",
+      "metadata": null,
+      "rank": 1,
+      "product_id": "prod_01KC4H49Z5R42GAXS5WNHZ9KQP",
+      "created_at": "2025-12-10T16:22:23.468Z",
+      "updated_at": "2025-12-10T16:22:23.468Z",
+      "deleted_at": null
+    },
+    {
+      "id": "img_01KC4H49Z912ADRE44NS8JMTDY",
+      "url": "https://medusa-public-images.s3.eu-west-1.amazonaws.com/tee-white-front.png",
+      "metadata": null,
+      "rank": 2,
+      "product_id": "prod_01KC4H49Z5R42GAXS5WNHZ9KQP",
+      "created_at": "2025-12-10T16:22:23.468Z",
+      "updated_at": "2025-12-10T16:22:23.468Z",
+      "deleted_at": null
+    },
+    {
+      "id": "img_01KC4H49Z98AYQG31GYXT4936N",
+      "url": "https://medusa-public-images.s3.eu-west-1.amazonaws.com/tee-white-back.png",
+      "metadata": null,
+      "rank": 3,
+      "product_id": "prod_01KC4H49Z5R42GAXS5WNHZ9KQP",
+      "created_at": "2025-12-10T16:22:23.468Z",
+      "updated_at": "2025-12-10T16:22:23.468Z",
+      "deleted_at": null
+    }
+  ],
+  "variants": [
+    {
+      "id": "variant_01KC4H4A0XQGF3JXBTZ8ZT3S6Q",
+      "title": "S / Black",
+      "sku": "SHIRT-S-BLACK",
+      "barcode": null,
+      "ean": null,
+      "upc": null,
+      "allow_backorder": false,
+      "manage_inventory": true,
+      "hs_code": null,
+      "origin_country": null,
+      "mid_code": null,
+      "material": null,
+      "weight": null,
+      "length": null,
+      "height": null,
+      "width": null,
+      "metadata": null,
+      "variant_rank": 0,
+      "thumbnail": null,
+      "product_id": "prod_01KC4H49Z5R42GAXS5WNHZ9KQP",
+      "created_at": "2025-12-10T16:22:23.520Z",
+      "updated_at": "2025-12-10T16:22:23.520Z",
+      "deleted_at": null,
+      "options": [
+        {
+          "id": "optval_01KC4H49Z79YY84MQ7XWJFE58F",
+          "value": "S",
+          "metadata": null,
+          "option_id": "opt_01KC4H49Z8CY0K3DWTZW2CAT9Q",
+          "option": {
+            "id": "opt_01KC4H49Z8CY0K3DWTZW2CAT9Q",
+            "title": "Size",
+            "metadata": null,
+            "product_id": "prod_01KC4H49Z5R42GAXS5WNHZ9KQP",
+            "created_at": "2025-12-10T16:22:23.467Z",
+            "updated_at": "2025-12-10T16:22:23.467Z",
+            "deleted_at": null
+          },
+          "created_at": "2025-12-10T16:22:23.467Z",
+          "updated_at": "2025-12-10T16:22:23.467Z",
+          "deleted_at": null
+        },
+        {
+          "id": "optval_01KC4H49Z8Z87FCP9B68WZK38Z",
+          "value": "Black",
+          "metadata": null,
+          "option_id": "opt_01KC4H49Z8RKFKDFCGDPA20M96",
+          "option": {
+            "id": "opt_01KC4H49Z8RKFKDFCGDPA20M96",
+            "title": "Color",
+            "metadata": null,
+            "product_id": "prod_01KC4H49Z5R42GAXS5WNHZ9KQP",
+            "created_at": "2025-12-10T16:22:23.467Z",
+            "updated_at": "2025-12-10T16:22:23.467Z",
+            "deleted_at": null
+          },
+          "created_at": "2025-12-10T16:22:23.467Z",
+          "updated_at": "2025-12-10T16:22:23.467Z",
+          "deleted_at": null
+        }
+      ],
+      "prices": [
+        {
+          "id": "price_01KC4H4A2R83TS1JH2YMGS73CP",
+          "amount": 15,
+          "currency_code": "usd",
+          "min_quantity": null,
+          "max_quantity": null,
+          "variant_id": "variant_01KC4H4A0XQGF3JXBTZ8ZT3S6Q",
+          "created_at": "2025-12-10T16:22:23.582Z",
+          "updated_at": "2025-12-10T16:22:23.582Z",
+          "rules": {}
+        },
+        {
+          "id": "price_01KC4H4A2RTK2W19Z662RJ5YF9",
+          "amount": 10,
+          "currency_code": "eur",
+          "min_quantity": null,
+          "max_quantity": null,
+          "variant_id": "variant_01KC4H4A0XQGF3JXBTZ8ZT3S6Q",
+          "created_at": "2025-12-10T16:22:23.582Z",
+          "updated_at": "2025-12-10T16:22:23.582Z",
+          "rules": {}
+        }
+      ]
+    },
+    {
+      "id": "variant_01KC4H4A0Y3WENZE6ZJBWAND5W",
+      "title": "S / White",
+      "sku": "SHIRT-S-WHITE",
+      "barcode": null,
+      "ean": null,
+      "upc": null,
+      "allow_backorder": false,
+      "manage_inventory": true,
+      "hs_code": null,
+      "origin_country": null,
+      "mid_code": null,
+      "material": null,
+      "weight": null,
+      "length": null,
+      "height": null,
+      "width": null,
+      "metadata": null,
+      "variant_rank": 0,
+      "thumbnail": null,
+      "product_id": "prod_01KC4H49Z5R42GAXS5WNHZ9KQP",
+      "created_at": "2025-12-10T16:22:23.521Z",
+      "updated_at": "2025-12-10T16:22:23.521Z",
+      "deleted_at": null,
+      "options": [
+        {
+          "id": "optval_01KC4H49Z79YY84MQ7XWJFE58F",
+          "value": "S",
+          "metadata": null,
+          "option_id": "opt_01KC4H49Z8CY0K3DWTZW2CAT9Q",
+          "option": {
+            "id": "opt_01KC4H49Z8CY0K3DWTZW2CAT9Q",
+            "title": "Size",
+            "metadata": null,
+            "product_id": "prod_01KC4H49Z5R42GAXS5WNHZ9KQP",
+            "created_at": "2025-12-10T16:22:23.467Z",
+            "updated_at": "2025-12-10T16:22:23.467Z",
+            "deleted_at": null
+          },
+          "created_at": "2025-12-10T16:22:23.467Z",
+          "updated_at": "2025-12-10T16:22:23.467Z",
+          "deleted_at": null
+        },
+        {
+          "id": "optval_01KC4H49Z8XWVDSN28P1TH3WYM",
+          "value": "White",
+          "metadata": null,
+          "option_id": "opt_01KC4H49Z8RKFKDFCGDPA20M96",
+          "option": {
+            "id": "opt_01KC4H49Z8RKFKDFCGDPA20M96",
+            "title": "Color",
+            "metadata": null,
+            "product_id": "prod_01KC4H49Z5R42GAXS5WNHZ9KQP",
+            "created_at": "2025-12-10T16:22:23.467Z",
+            "updated_at": "2025-12-10T16:22:23.467Z",
+            "deleted_at": null
+          },
+          "created_at": "2025-12-10T16:22:23.468Z",
+          "updated_at": "2025-12-10T16:22:23.468Z",
+          "deleted_at": null
+        }
+      ],
+      "prices": [
+        {
+          "id": "price_01KC4H4A2R3VXHHH402MSW0CYZ",
+          "amount": 15,
+          "currency_code": "usd",
+          "min_quantity": null,
+          "max_quantity": null,
+          "variant_id": "variant_01KC4H4A0Y3WENZE6ZJBWAND5W",
+          "created_at": "2025-12-10T16:22:23.582Z",
+          "updated_at": "2025-12-10T16:22:23.582Z",
+          "rules": {}
+        },
+        {
+          "id": "price_01KC4H4A2RRW70REFBSXXE5YC4",
+          "amount": 10,
+          "currency_code": "eur",
+          "min_quantity": null,
+          "max_quantity": null,
+          "variant_id": "variant_01KC4H4A0Y3WENZE6ZJBWAND5W",
+          "created_at": "2025-12-10T16:22:23.582Z",
+          "updated_at": "2025-12-10T16:22:23.582Z",
+          "rules": {}
+        }
+      ]
+    },
+    {
+      "id": "variant_01KC4H4A0YNNHT8E3JNCDKP2DD",
+      "title": "M / Black",
+      "sku": "SHIRT-M-BLACK",
+      "barcode": null,
+      "ean": null,
+      "upc": null,
+      "allow_backorder": false,
+      "manage_inventory": true,
+      "hs_code": null,
+      "origin_country": null,
+      "mid_code": null,
+      "material": null,
+      "weight": null,
+      "length": null,
+      "height": null,
+      "width": null,
+      "metadata": null,
+      "variant_rank": 0,
+      "thumbnail": null,
+      "product_id": "prod_01KC4H49Z5R42GAXS5WNHZ9KQP",
+      "created_at": "2025-12-10T16:22:23.521Z",
+      "updated_at": "2025-12-10T16:22:23.521Z",
+      "deleted_at": null,
+      "options": [
+        {
+          "id": "optval_01KC4H49Z850KXQXGFJNJ8VWHR",
+          "value": "M",
+          "metadata": null,
+          "option_id": "opt_01KC4H49Z8CY0K3DWTZW2CAT9Q",
+          "option": {
+            "id": "opt_01KC4H49Z8CY0K3DWTZW2CAT9Q",
+            "title": "Size",
+            "metadata": null,
+            "product_id": "prod_01KC4H49Z5R42GAXS5WNHZ9KQP",
+            "created_at": "2025-12-10T16:22:23.467Z",
+            "updated_at": "2025-12-10T16:22:23.467Z",
+            "deleted_at": null
+          },
+          "created_at": "2025-12-10T16:22:23.467Z",
+          "updated_at": "2025-12-10T16:22:23.467Z",
+          "deleted_at": null
+        },
+        {
+          "id": "optval_01KC4H49Z8Z87FCP9B68WZK38Z",
+          "value": "Black",
+          "metadata": null,
+          "option_id": "opt_01KC4H49Z8RKFKDFCGDPA20M96",
+          "option": {
+            "id": "opt_01KC4H49Z8RKFKDFCGDPA20M96",
+            "title": "Color",
+            "metadata": null,
+            "product_id": "prod_01KC4H49Z5R42GAXS5WNHZ9KQP",
+            "created_at": "2025-12-10T16:22:23.467Z",
+            "updated_at": "2025-12-10T16:22:23.467Z",
+            "deleted_at": null
+          },
+          "created_at": "2025-12-10T16:22:23.467Z",
+          "updated_at": "2025-12-10T16:22:23.467Z",
+          "deleted_at": null
+        }
+      ],
+      "prices": [
+        {
+          "id": "price_01KC4H4A2SZ2VET9282SG1G336",
+          "amount": 10,
+          "currency_code": "eur",
+          "min_quantity": null,
+          "max_quantity": null,
+          "variant_id": "variant_01KC4H4A0YNNHT8E3JNCDKP2DD",
+          "created_at": "2025-12-10T16:22:23.582Z",
+          "updated_at": "2025-12-10T16:22:23.582Z",
+          "rules": {}
+        },
+        {
+          "id": "price_01KC4H4A2SF2NNFZKNF1HTK544",
+          "amount": 15,
+          "currency_code": "usd",
+          "min_quantity": null,
+          "max_quantity": null,
+          "variant_id": "variant_01KC4H4A0YNNHT8E3JNCDKP2DD",
+          "created_at": "2025-12-10T16:22:23.582Z",
+          "updated_at": "2025-12-10T16:22:23.582Z",
+          "rules": {}
+        }
+      ]
+    },
+    {
+      "id": "variant_01KC4H4A0YSPX6T0ACANR8KY4X",
+      "title": "M / White",
+      "sku": "SHIRT-M-WHITE",
+      "barcode": null,
+      "ean": null,
+      "upc": null,
+      "allow_backorder": false,
+      "manage_inventory": true,
+      "hs_code": null,
+      "origin_country": null,
+      "mid_code": null,
+      "material": null,
+      "weight": null,
+      "length": null,
+      "height": null,
+      "width": null,
+      "metadata": null,
+      "variant_rank": 0,
+      "thumbnail": null,
+      "product_id": "prod_01KC4H49Z5R42GAXS5WNHZ9KQP",
+      "created_at": "2025-12-10T16:22:23.521Z",
+      "updated_at": "2025-12-10T16:22:23.521Z",
+      "deleted_at": null,
+      "options": [
+        {
+          "id": "optval_01KC4H49Z850KXQXGFJNJ8VWHR",
+          "value": "M",
+          "metadata": null,
+          "option_id": "opt_01KC4H49Z8CY0K3DWTZW2CAT9Q",
+          "option": {
+            "id": "opt_01KC4H49Z8CY0K3DWTZW2CAT9Q",
+            "title": "Size",
+            "metadata": null,
+            "product_id": "prod_01KC4H49Z5R42GAXS5WNHZ9KQP",
+            "created_at": "2025-12-10T16:22:23.467Z",
+            "updated_at": "2025-12-10T16:22:23.467Z",
+            "deleted_at": null
+          },
+          "created_at": "2025-12-10T16:22:23.467Z",
+          "updated_at": "2025-12-10T16:22:23.467Z",
+          "deleted_at": null
+        },
+        {
+          "id": "optval_01KC4H49Z8XWVDSN28P1TH3WYM",
+          "value": "White",
+          "metadata": null,
+          "option_id": "opt_01KC4H49Z8RKFKDFCGDPA20M96",
+          "option": {
+            "id": "opt_01KC4H49Z8RKFKDFCGDPA20M96",
+            "title": "Color",
+            "metadata": null,
+            "product_id": "prod_01KC4H49Z5R42GAXS5WNHZ9KQP",
+            "created_at": "2025-12-10T16:22:23.467Z",
+            "updated_at": "2025-12-10T16:22:23.467Z",
+            "deleted_at": null
+          },
+          "created_at": "2025-12-10T16:22:23.468Z",
+          "updated_at": "2025-12-10T16:22:23.468Z",
+          "deleted_at": null
+        }
+      ],
+      "prices": [
+        {
+          "id": "price_01KC4H4A2SZK56VQ0XY83AXA75",
+          "amount": 10,
+          "currency_code": "eur",
+          "min_quantity": null,
+          "max_quantity": null,
+          "variant_id": "variant_01KC4H4A0YSPX6T0ACANR8KY4X",
+          "created_at": "2025-12-10T16:22:23.582Z",
+          "updated_at": "2025-12-10T16:22:23.582Z",
+          "rules": {}
+        },
+        {
+          "id": "price_01KC4H4A2SEQAN08VFK2ADWC3M",
+          "amount": 15,
+          "currency_code": "usd",
+          "min_quantity": null,
+          "max_quantity": null,
+          "variant_id": "variant_01KC4H4A0YSPX6T0ACANR8KY4X",
+          "created_at": "2025-12-10T16:22:23.582Z",
+          "updated_at": "2025-12-10T16:22:23.582Z",
+          "rules": {}
+        }
+      ]
+    },
+    {
+      "id": "variant_01KC4H4A0YDZ2Z9C9Z6HJ4FE7Y",
+      "title": "L / Black",
+      "sku": "SHIRT-L-BLACK",
+      "barcode": null,
+      "ean": null,
+      "upc": null,
+      "allow_backorder": false,
+      "manage_inventory": true,
+      "hs_code": null,
+      "origin_country": null,
+      "mid_code": null,
+      "material": null,
+      "weight": null,
+      "length": null,
+      "height": null,
+      "width": null,
+      "metadata": null,
+      "variant_rank": 0,
+      "thumbnail": null,
+      "product_id": "prod_01KC4H49Z5R42GAXS5WNHZ9KQP",
+      "created_at": "2025-12-10T16:22:23.521Z",
+      "updated_at": "2025-12-10T16:22:23.521Z",
+      "deleted_at": null,
+      "options": [
+        {
+          "id": "optval_01KC4H49Z8VBT9JHG9H9SB5GEM",
+          "value": "L",
+          "metadata": null,
+          "option_id": "opt_01KC4H49Z8CY0K3DWTZW2CAT9Q",
+          "option": {
+            "id": "opt_01KC4H49Z8CY0K3DWTZW2CAT9Q",
+            "title": "Size",
+            "metadata": null,
+            "product_id": "prod_01KC4H49Z5R42GAXS5WNHZ9KQP",
+            "created_at": "2025-12-10T16:22:23.467Z",
+            "updated_at": "2025-12-10T16:22:23.467Z",
+            "deleted_at": null
+          },
+          "created_at": "2025-12-10T16:22:23.467Z",
+          "updated_at": "2025-12-10T16:22:23.467Z",
+          "deleted_at": null
+        },
+        {
+          "id": "optval_01KC4H49Z8Z87FCP9B68WZK38Z",
+          "value": "Black",
+          "metadata": null,
+          "option_id": "opt_01KC4H49Z8RKFKDFCGDPA20M96",
+          "option": {
+            "id": "opt_01KC4H49Z8RKFKDFCGDPA20M96",
+            "title": "Color",
+            "metadata": null,
+            "product_id": "prod_01KC4H49Z5R42GAXS5WNHZ9KQP",
+            "created_at": "2025-12-10T16:22:23.467Z",
+            "updated_at": "2025-12-10T16:22:23.467Z",
+            "deleted_at": null
+          },
+          "created_at": "2025-12-10T16:22:23.467Z",
+          "updated_at": "2025-12-10T16:22:23.467Z",
+          "deleted_at": null
+        }
+      ],
+      "prices": [
+        {
+          "id": "price_01KC4H4A2SPQNF7Z38PMA31ZAQ",
+          "amount": 15,
+          "currency_code": "usd",
+          "min_quantity": null,
+          "max_quantity": null,
+          "variant_id": "variant_01KC4H4A0YDZ2Z9C9Z6HJ4FE7Y",
+          "created_at": "2025-12-10T16:22:23.582Z",
+          "updated_at": "2025-12-10T16:22:23.582Z",
+          "rules": {}
+        },
+        {
+          "id": "price_01KC4H4A2S1ARHNTW1M2JGJ93P",
+          "amount": 10,
+          "currency_code": "eur",
+          "min_quantity": null,
+          "max_quantity": null,
+          "variant_id": "variant_01KC4H4A0YDZ2Z9C9Z6HJ4FE7Y",
+          "created_at": "2025-12-10T16:22:23.582Z",
+          "updated_at": "2025-12-10T16:22:23.582Z",
+          "rules": {}
+        }
+      ]
+    },
+    {
+      "id": "variant_01KC4H4A0Y02FDCMFMSR595DX9",
+      "title": "L / White",
+      "sku": "SHIRT-L-WHITE",
+      "barcode": null,
+      "ean": null,
+      "upc": null,
+      "allow_backorder": false,
+      "manage_inventory": true,
+      "hs_code": null,
+      "origin_country": null,
+      "mid_code": null,
+      "material": null,
+      "weight": null,
+      "length": null,
+      "height": null,
+      "width": null,
+      "metadata": null,
+      "variant_rank": 0,
+      "thumbnail": null,
+      "product_id": "prod_01KC4H49Z5R42GAXS5WNHZ9KQP",
+      "created_at": "2025-12-10T16:22:23.521Z",
+      "updated_at": "2025-12-10T16:22:23.521Z",
+      "deleted_at": null,
+      "options": [
+        {
+          "id": "optval_01KC4H49Z8VBT9JHG9H9SB5GEM",
+          "value": "L",
+          "metadata": null,
+          "option_id": "opt_01KC4H49Z8CY0K3DWTZW2CAT9Q",
+          "option": {
+            "id": "opt_01KC4H49Z8CY0K3DWTZW2CAT9Q",
+            "title": "Size",
+            "metadata": null,
+            "product_id": "prod_01KC4H49Z5R42GAXS5WNHZ9KQP",
+            "created_at": "2025-12-10T16:22:23.467Z",
+            "updated_at": "2025-12-10T16:22:23.467Z",
+            "deleted_at": null
+          },
+          "created_at": "2025-12-10T16:22:23.467Z",
+          "updated_at": "2025-12-10T16:22:23.467Z",
+          "deleted_at": null
+        },
+        {
+          "id": "optval_01KC4H49Z8XWVDSN28P1TH3WYM",
+          "value": "White",
+          "metadata": null,
+          "option_id": "opt_01KC4H49Z8RKFKDFCGDPA20M96",
+          "option": {
+            "id": "opt_01KC4H49Z8RKFKDFCGDPA20M96",
+            "title": "Color",
+            "metadata": null,
+            "product_id": "prod_01KC4H49Z5R42GAXS5WNHZ9KQP",
+            "created_at": "2025-12-10T16:22:23.467Z",
+            "updated_at": "2025-12-10T16:22:23.467Z",
+            "deleted_at": null
+          },
+          "created_at": "2025-12-10T16:22:23.468Z",
+          "updated_at": "2025-12-10T16:22:23.468Z",
+          "deleted_at": null
+        }
+      ],
+      "prices": [
+        {
+          "id": "price_01KC4H4A2S8HB681EDAZYQGCV8",
+          "amount": 10,
+          "currency_code": "eur",
+          "min_quantity": null,
+          "max_quantity": null,
+          "variant_id": "variant_01KC4H4A0Y02FDCMFMSR595DX9",
+          "created_at": "2025-12-10T16:22:23.582Z",
+          "updated_at": "2025-12-10T16:22:23.582Z",
+          "rules": {}
+        },
+        {
+          "id": "price_01KC4H4A2SXCZ7RNN359NG5DFY",
+          "amount": 15,
+          "currency_code": "usd",
+          "min_quantity": null,
+          "max_quantity": null,
+          "variant_id": "variant_01KC4H4A0Y02FDCMFMSR595DX9",
+          "created_at": "2025-12-10T16:22:23.582Z",
+          "updated_at": "2025-12-10T16:22:23.582Z",
+          "rules": {}
+        }
+      ]
+    },
+    {
+      "id": "variant_01KC4H4A0YY6DYCS50SYP0092K",
+      "title": "XL / Black",
+      "sku": "SHIRT-XL-BLACK",
+      "barcode": null,
+      "ean": null,
+      "upc": null,
+      "allow_backorder": false,
+      "manage_inventory": true,
+      "hs_code": null,
+      "origin_country": null,
+      "mid_code": null,
+      "material": null,
+      "weight": null,
+      "length": null,
+      "height": null,
+      "width": null,
+      "metadata": null,
+      "variant_rank": 0,
+      "thumbnail": null,
+      "product_id": "prod_01KC4H49Z5R42GAXS5WNHZ9KQP",
+      "created_at": "2025-12-10T16:22:23.521Z",
+      "updated_at": "2025-12-10T16:22:23.521Z",
+      "deleted_at": null,
+      "options": [
+        {
+          "id": "optval_01KC4H49Z84PGKZ9BWCTSHVWXY",
+          "value": "XL",
+          "metadata": null,
+          "option_id": "opt_01KC4H49Z8CY0K3DWTZW2CAT9Q",
+          "option": {
+            "id": "opt_01KC4H49Z8CY0K3DWTZW2CAT9Q",
+            "title": "Size",
+            "metadata": null,
+            "product_id": "prod_01KC4H49Z5R42GAXS5WNHZ9KQP",
+            "created_at": "2025-12-10T16:22:23.467Z",
+            "updated_at": "2025-12-10T16:22:23.467Z",
+            "deleted_at": null
+          },
+          "created_at": "2025-12-10T16:22:23.467Z",
+          "updated_at": "2025-12-10T16:22:23.467Z",
+          "deleted_at": null
+        },
+        {
+          "id": "optval_01KC4H49Z8Z87FCP9B68WZK38Z",
+          "value": "Black",
+          "metadata": null,
+          "option_id": "opt_01KC4H49Z8RKFKDFCGDPA20M96",
+          "option": {
+            "id": "opt_01KC4H49Z8RKFKDFCGDPA20M96",
+            "title": "Color",
+            "metadata": null,
+            "product_id": "prod_01KC4H49Z5R42GAXS5WNHZ9KQP",
+            "created_at": "2025-12-10T16:22:23.467Z",
+            "updated_at": "2025-12-10T16:22:23.467Z",
+            "deleted_at": null
+          },
+          "created_at": "2025-12-10T16:22:23.467Z",
+          "updated_at": "2025-12-10T16:22:23.467Z",
+          "deleted_at": null
+        }
+      ],
+      "prices": [
+        {
+          "id": "price_01KC4H4A2TBPS3K0RNKY1BX4KZ",
+          "amount": 10,
+          "currency_code": "eur",
+          "min_quantity": null,
+          "max_quantity": null,
+          "variant_id": "variant_01KC4H4A0YY6DYCS50SYP0092K",
+          "created_at": "2025-12-10T16:22:23.582Z",
+          "updated_at": "2025-12-10T16:22:23.582Z",
+          "rules": {}
+        },
+        {
+          "id": "price_01KC4H4A2T1QCCQBKVM394700G",
+          "amount": 15,
+          "currency_code": "usd",
+          "min_quantity": null,
+          "max_quantity": null,
+          "variant_id": "variant_01KC4H4A0YY6DYCS50SYP0092K",
+          "created_at": "2025-12-10T16:22:23.582Z",
+          "updated_at": "2025-12-10T16:22:23.582Z",
+          "rules": {}
+        }
+      ]
+    },
+    {
+      "id": "variant_01KC4H4A0ZTDJN5N22DWMHY4ZF",
+      "title": "XL / White",
+      "sku": "SHIRT-XL-WHITE",
+      "barcode": null,
+      "ean": null,
+      "upc": null,
+      "allow_backorder": false,
+      "manage_inventory": true,
+      "hs_code": null,
+      "origin_country": null,
+      "mid_code": null,
+      "material": null,
+      "weight": null,
+      "length": null,
+      "height": null,
+      "width": null,
+      "metadata": null,
+      "variant_rank": 0,
+      "thumbnail": null,
+      "product_id": "prod_01KC4H49Z5R42GAXS5WNHZ9KQP",
+      "created_at": "2025-12-10T16:22:23.521Z",
+      "updated_at": "2025-12-10T16:22:23.521Z",
+      "deleted_at": null,
+      "options": [
+        {
+          "id": "optval_01KC4H49Z84PGKZ9BWCTSHVWXY",
+          "value": "XL",
+          "metadata": null,
+          "option_id": "opt_01KC4H49Z8CY0K3DWTZW2CAT9Q",
+          "option": {
+            "id": "opt_01KC4H49Z8CY0K3DWTZW2CAT9Q",
+            "title": "Size",
+            "metadata": null,
+            "product_id": "prod_01KC4H49Z5R42GAXS5WNHZ9KQP",
+            "created_at": "2025-12-10T16:22:23.467Z",
+            "updated_at": "2025-12-10T16:22:23.467Z",
+            "deleted_at": null
+          },
+          "created_at": "2025-12-10T16:22:23.467Z",
+          "updated_at": "2025-12-10T16:22:23.467Z",
+          "deleted_at": null
+        },
+        {
+          "id": "optval_01KC4H49Z8XWVDSN28P1TH3WYM",
+          "value": "White",
+          "metadata": null,
+          "option_id": "opt_01KC4H49Z8RKFKDFCGDPA20M96",
+          "option": {
+            "id": "opt_01KC4H49Z8RKFKDFCGDPA20M96",
+            "title": "Color",
+            "metadata": null,
+            "product_id": "prod_01KC4H49Z5R42GAXS5WNHZ9KQP",
+            "created_at": "2025-12-10T16:22:23.467Z",
+            "updated_at": "2025-12-10T16:22:23.467Z",
+            "deleted_at": null
+          },
+          "created_at": "2025-12-10T16:22:23.468Z",
+          "updated_at": "2025-12-10T16:22:23.468Z",
+          "deleted_at": null
+        }
+      ],
+      "prices": [
+        {
+          "id": "price_01KC4H4A2T81VNRGKSNBERM5GG",
+          "amount": 10,
+          "currency_code": "eur",
+          "min_quantity": null,
+          "max_quantity": null,
+          "variant_id": "variant_01KC4H4A0ZTDJN5N22DWMHY4ZF",
+          "created_at": "2025-12-10T16:22:23.582Z",
+          "updated_at": "2025-12-10T16:22:23.582Z",
+          "rules": {}
+        },
+        {
+          "id": "price_01KC4H4A2TA4PX0Q7G5RZQSSDZ",
+          "amount": 15,
+          "currency_code": "usd",
+          "min_quantity": null,
+          "max_quantity": null,
+          "variant_id": "variant_01KC4H4A0ZTDJN5N22DWMHY4ZF",
+          "created_at": "2025-12-10T16:22:23.582Z",
+          "updated_at": "2025-12-10T16:22:23.582Z",
+          "rules": {}
+        }
+      ]
+    }
+  ],
+  "sales_channels": [
+    {
+      "id": "sc_01KC4H49PTBS2XBMJAWKG952TG",
+      "name": "Default Sales Channel",
+      "description": "Created by Medusa",
+      "is_disabled": false,
+      "metadata": null,
+      "created_at": "2025-12-10T16:22:23.194Z",
+      "updated_at": "2025-12-10T16:22:23.194Z",
+      "deleted_at": null
+    }
+  ]
+}
