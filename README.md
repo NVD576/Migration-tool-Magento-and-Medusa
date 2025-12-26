@@ -31,20 +31,29 @@ pip install requests
 - Python:
 
 ```powershell
-python main.py   #Chạy mà không cần giao diện
+  python main.py   #Chạy mà không cần giao diện
 
-python app_gui.py #giao diện chính
+  python app_gui.py #giao diện chính
+
 ```
+
+1. Cấu hình
+
+- Ấn vào nút hiện cấu hình để cấu hình các cài đặt cần thiết như:
+  - Base URL
+  - Username
+  - Password
+- Hệ thống cung cấp chức năng test để có thể kiểm tra các connection trước.
 
 ## Ghi chú
 
 Cài Magento và Medusa trước nếu chưa có server
 
-# Magento
+### Magento
 
 - <https://github.com/NVD576/Magento.git>
 
-# MedusaJs
+### MedusaJs
 
 - <https://github.com/NVD576/Medusa.git>
 
