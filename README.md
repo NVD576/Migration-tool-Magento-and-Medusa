@@ -19,14 +19,14 @@ git clone https://github.com/NVD576/Migration-tool-Magento-and-Medusa.git
 cd Migration-tool-Magento-and-Medusa
 ```
 
-1. Cài thư viện
+2. Cài thư viện
 
 ```powershell
 pip install requests
 
 ```
 
-1. Chạy ứng dụng
+3. Chạy ứng dụng
 
 - Python:
 
@@ -37,7 +37,7 @@ pip install requests
 
 ```
 
-1. Cấu hình
+4. Cấu hình
 
 - Ấn vào nút hiện cấu hình để cấu hình các cài đặt cần thiết như:
   - Base URL
