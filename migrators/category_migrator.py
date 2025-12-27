@@ -13,9 +13,11 @@ from migrators.utils import (
     _is_duplicate_http,
     _resp_json_or_text,
     _is_http_status,
+    log_dry_run,
 )
 
 def migrate_categories(magento: MagentoConnector, medusa: MedusaConnector, args):
+    print("\n[STAGE 3/5] 📥 DATA EXTRACTION & FETCHING")
     print("🗂️ Fetching categories from Magento...")
     categories = extract_categories(magento)
     
@@ -50,6 +52,14 @@ def migrate_categories(magento: MagentoConnector, medusa: MedusaConnector, args)
         handle_to_id = {}
 
     print(f"🚀 Migrating {len(categories_sorted)} categories...\n")
+    
+    # Counters for summary
+    count_success = 0
+    count_ignore = 0
+    count_fail = 0
+
+    print(f"\n[STAGE 4/5] ⚙️ DATA TRANSFORMATION")
+    print(f"[STAGE 5/5] 🚀 SYNCING")
     mg_to_medusa = {}
     pending = list(categories_sorted)
     progress = True
@@ -76,17 +86,17 @@ def migrate_categories(magento: MagentoConnector, medusa: MedusaConnector, args)
                 cat, parent_category_id=parent_medusa_id
             )
 
+            log_dry_run(payload_pc, "category", args)
             if args.dry_run:
-                print(json.dumps(payload_pc, ensure_ascii=False, indent=2))
                 mg_to_medusa[mg_id] = f"(dry-run) {payload_pc.get('handle')}"
                 progress = True
                 continue
 
-            existing_id = handle_to_id.get(payload_pc.get("handle"))
             if existing_id:
                 print(f"ℹ️  Category '{name}' đã tồn tại, bỏ qua")
                 mg_to_medusa[mg_id] = existing_id
                 progress = True
+                count_ignore += 1
                 continue
 
             try:
@@ -94,18 +104,18 @@ def migrate_categories(magento: MagentoConnector, medusa: MedusaConnector, args)
                     payload_pc, idempotency_key=f"category:{mg_id}"
                 )
                 created = res.get("product_category") or res.get("productCategory") or res
-                created_id = created.get("id") if isinstance(created, dict) else None
                 if created_id:
                     mg_to_medusa[mg_id] = created_id
                     handle_to_id[payload_pc.get("handle")] = created_id
                     print(f"✅ Đã tạo category: {name}")
+                    count_success += 1
                 progress = True
 
             except requests.exceptions.HTTPError as e:
-                resp = getattr(e, "response", None)
                 if _is_duplicate_http(resp):
                     print(f"ℹ️  Category '{name}' đã tồn tại, bỏ qua")
                     progress = True
+                    count_ignore += 1
                     continue
 
                 if resp is not None and resp.status_code in (400, 422):
@@ -113,6 +123,7 @@ def migrate_categories(magento: MagentoConnector, medusa: MedusaConnector, args)
                     detail = _resp_json_or_text(resp)
                     print(json.dumps(detail, ensure_ascii=False, indent=2) if isinstance(detail, (dict, list)) else str(detail))
                     progress = True
+                    count_fail += 1
                     continue
                 raise
 
@@ -140,4 +151,10 @@ def migrate_categories(magento: MagentoConnector, medusa: MedusaConnector, args)
     if pending:
         print(f"⚠️ Có {len(pending)} category chưa sync được do thiếu parent mapping.")
     
+    print(f"\n--- Category Migration Summary ---")
+    print(f"✅ Success: {count_success}")
+    print(f"ℹ️  Ignored: {count_ignore}")
+    print(f"❌ Failed:  {count_fail}")
+    print(f"----------------------------------\n")
+
     return mg_to_medusa

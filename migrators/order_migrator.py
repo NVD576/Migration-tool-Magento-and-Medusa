@@ -4,9 +4,10 @@ from connectors.magento_connector import MagentoConnector
 from connectors.medusa_connector import MedusaConnector
 from extractors.orders import extract_orders
 from transformers.order_transformer import transform_order
-from migrators.utils import _limit_iter, _fetch_all_variants, _is_duplicate_http, _resp_json_or_text
+from migrators.utils import _limit_iter, _fetch_all_variants, _is_duplicate_http, _resp_json_or_text, log_dry_run
 
 def migrate_orders(magento: MagentoConnector, medusa: MedusaConnector, args):
+    print("\n[STAGE 3/5] 📥 DATA EXTRACTION & FETCHING")
     print("🧾 Fetching orders from Magento...")
     orders = extract_orders(magento)
     
@@ -60,14 +61,21 @@ def migrate_orders(magento: MagentoConnector, medusa: MedusaConnector, args):
     except Exception as e:
         print(f"⚠️ Failed to fetch shipping options: {e}")
 
+    # Counters for summary
+    count_success = 0
+    count_ignore = 0
+    count_fail = 0
+
+    print(f"\n[STAGE 4/5] ⚙️ DATA TRANSFORMATION")
+    print(f"[STAGE 5/5] 🚀 SYNCING")
     for o in orders:
         inc = o.get("increment_id") or o.get("entity_id")
         print(f"➡ Syncing order: {inc}")
 
         payload = transform_order(o, region_id, sku_map, shipping_option)
 
+        log_dry_run(payload, "order", args)
         if args.dry_run:
-            print(json.dumps(payload, ensure_ascii=False, indent=2))
             continue
 
         try:
@@ -84,6 +92,7 @@ def migrate_orders(magento: MagentoConnector, medusa: MedusaConnector, args):
                         print(f"⚠️ Draft Order {draft_id} created. Finalize not supported/returned empty.")
                     else:
                         print(f"✅ Finalized Order from Draft: {draft_id}")
+                        count_success += 1
                         
                         # Post-creation fulfillment
                         try:
@@ -101,19 +110,30 @@ def migrate_orders(magento: MagentoConnector, medusa: MedusaConnector, args):
                          print(fe.response.text)
             elif draft_id:
                 print(f"✅ Created Draft Order: {draft_id} (Not finalized)")
+                count_success += 1
             else:
                 print("✅ Created Draft Order (unknown ID)")
+                count_success += 1
 
         except requests.exceptions.HTTPError as e:
             resp = getattr(e, "response", None)
             if _is_duplicate_http(resp):
                 print(f"ℹ️  Order {inc} đã tồn tại, bỏ qua")
+                count_ignore += 1
                 continue
             if resp is not None and resp.status_code in (400, 422):
                 print(" Tạo Draft Order thất bại (Bad Request).")
                 detail = _resp_json_or_text(resp)
                 print(json.dumps(detail, ensure_ascii=False, indent=2) if isinstance(detail, (dict, list)) else str(detail))
+                count_fail += 1
                 continue
             raise
         except Exception:
+            count_fail += 1
             raise
+
+    print(f"\n--- Order Migration Summary ---")
+    print(f"✅ Success: {count_success}")
+    print(f"ℹ️  Ignored: {count_ignore}")
+    print(f"❌ Failed:  {count_fail}")
+    print(f"-------------------------------\n")

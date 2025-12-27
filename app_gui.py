@@ -235,7 +235,15 @@ class MigrationGUI(tk.Tk):
         tk.Entry(opts_box, textvariable=self.var_limit, width=12).grid(row=0, column=1, sticky="w", padx=10, pady=(8, 4))
 
         self.var_dry_run = tk.BooleanVar(value=False)
-        tk.Checkbutton(opts_box, text="Dry-run (chỉ in payload)", variable=self.var_dry_run).grid(row=1, column=0, columnspan=2, sticky="w", padx=10, pady=(2, 10))
+        self.var_dry_run_file = tk.BooleanVar(value=False)
+        
+        dr_frame = tk.Frame(opts_box)
+        dr_frame.grid(row=1, column=0, columnspan=2, sticky="w", padx=10, pady=(2, 5))
+        
+        tk.Checkbutton(dr_frame, text="Dry-run (chỉ in payload)", variable=self.var_dry_run).pack(side="left")
+        self.cb_dry_run_file = tk.Checkbutton(dr_frame, text="Xuất ra file", variable=self.var_dry_run_file)
+        self.cb_dry_run_file.pack(side="left", padx=(10, 0))
+
         self.var_finalize_orders = tk.BooleanVar(value=True)
         tk.Checkbutton(opts_box, text="Finalize orders (Draft -> Order)", variable=self.var_finalize_orders).grid(row=2, column=0, columnspan=2, sticky="w", padx=10, pady=(0, 10))
 
@@ -316,6 +324,40 @@ class MigrationGUI(tk.Tk):
     def _log(self, s: str):
         self.txt.insert("end", s)
         self.txt.see("end")
+
+    def _save_to_config_py(self):
+        magento_base = self.var_magento_base_url.get().strip().rstrip("/")
+        magento_user = self.var_magento_user.get().strip()
+        magento_pass = self.var_magento_pass.get().strip()
+        magento_verify = self.var_magento_verify.get()
+
+        medusa_base = self.var_medusa_base_url.get().strip().rstrip("/")
+        medusa_email = self.var_medusa_email.get().strip()
+        medusa_pass = self.var_medusa_pass.get().strip()
+        
+        # Get existing Medusa config to preserve other fields like SALES_CHANNEL
+        current_medusa = dict(CFG_MEDUSA)
+        
+        content = f"""MAGENTO = {{
+    "BASE_URL": "{magento_base}",
+    "ADMIN_USERNAME": "{magento_user}",
+    "ADMIN_PASSWORD": "{magento_pass}",
+    "VERIFY_SSL": {magento_verify},
+}}
+
+MEDUSA = {{
+    "BASE_URL": "{medusa_base}",
+    "EMAIL": "{medusa_email}",
+    "PASSWORD": "{medusa_pass}",
+    "SALES_CHANNEL": "{current_medusa.get('SALES_CHANNEL', 'Default Sales Channel')}",
+}}
+"""
+        try:
+            with open("config.py", "w", encoding="utf-8") as f:
+                f.write(content)
+            self._log("💾 Đã lưu cấu hình vào config.py\n")
+        except Exception as e:
+            self._log(f"⚠ Không thể lưu config.py: {e}\n")
 
     def _get_entities(self):
         entities = []
@@ -700,6 +742,7 @@ class MigrationGUI(tk.Tk):
 
 
     def _run(self):
+        """Entry point for Run button - starts background thread"""
         if self._proc and self._proc.poll() is None:
             messagebox.showwarning("Đang chạy", "Migration đang chạy. Hãy Stop trước khi chạy lại.")
             return
@@ -710,57 +753,94 @@ class MigrationGUI(tk.Tk):
             return
 
         try:
-            limit = int((self.var_limit.get() or "0").strip())
-            if limit < 0:
-                raise ValueError()
-        except Exception:
+            limit_val = (self.var_limit.get() or "0").strip()
+            limit = int(limit_val)
+            if limit < 0: raise ValueError()
+        except:
             messagebox.showerror("Sai limit", "Limit phải là số nguyên >= 0.")
             return
 
-        cmd = [sys.executable, "-u", "main.py", "--entities", ",".join(entities)]
-        if limit > 0:
-            cmd += ["--limit", str(limit)]
-        if self.var_dry_run.get():
-            cmd += ["--dry-run"]
-        if self.var_finalize_orders.get():
-            cmd += ["--finalize-orders"]
-
-        p_ids = self.var_product_ids.get().strip()
-        if p_ids:
-            cmd += ["--product-ids", p_ids]
-            
-        c_ids = self.var_category_ids.get().strip()
-        if c_ids:
-            cmd += ["--category-ids", c_ids]
-            
-        cust_ids = self.var_customer_ids.get().strip()
-        if cust_ids:
-            cmd += ["--customer-ids", cust_ids]
-            
-        ord_ids = self.var_order_ids.get().strip()
-        if ord_ids:
-            cmd += ["--order-ids", ord_ids]
-
+        # Disable run button immediately
+        self.btn_run.config(state="disabled")
+        self.btn_stop.config(state="normal")
         self._clear_log()
-        self._log("Command:\n  " + " ".join(cmd) + "\n")
-        self._log("(Credentials được truyền qua ENV từ GUI, không hiện trên command line)\n\n")
 
+        # Start background thread
+        threading.Thread(target=self._run_background, args=(entities, limit), daemon=True).start()
+
+    def _run_background(self, entities, limit):
+        """Actual migration logic running in a separate thread"""
         try:
+            import datetime
+            run_id = datetime.datetime.now().strftime("%Y%m%d_%H%M%S")
+
+            cmd = [sys.executable, "-u", "main.py", "--entities", ",".join(entities), "--run-id", run_id]
+            if limit > 0:
+                cmd += ["--limit", str(limit)]
+            if self.var_dry_run.get():
+                cmd += ["--dry-run"]
+            if self.var_dry_run_file.get():
+                cmd += ["--dry-run-file"]
+            if self.var_finalize_orders.get():
+                cmd += ["--finalize-orders"]
+                
+            # Save config before running
+            self._save_to_config_py()
+
+            p_ids = self.var_product_ids.get().strip()
+            if p_ids: cmd += ["--product-ids", p_ids]
+            c_ids = self.var_category_ids.get().strip()
+            if c_ids: cmd += ["--category-ids", c_ids]
+            cust_ids = self.var_customer_ids.get().strip()
+            if cust_ids: cmd += ["--customer-ids", cust_ids]
+            ord_ids = self.var_order_ids.get().strip()
+            if ord_ids: cmd += ["--order-ids", ord_ids]
+
+            # Ensure tokens are cached for session persistence
+            if not self.cached_magento_token or not self.cached_medusa_token:
+                if not self.cached_magento_token:
+                    # Chú ý: _get_magento_client có hiện messagebox, 
+                    # có thể gây treo nếu gọi từ thread phụ. Cần redirect lỗi log.
+                    base_url = (self.var_magento_base_url.get() or "").strip().rstrip("/")
+                    user = (self.var_magento_user.get() or "").strip()
+                    pwd = (self.var_magento_pass.get() or "").strip()
+                    verify = bool(self.var_magento_verify.get())
+                    try:
+                        self.cached_magento_token = get_magento_token(base_url, user, pwd, verify)
+                    except Exception as e:
+                        self._log(f"❌ Magento Login thất bại: {e}\n")
+                        self.after(0, lambda: messagebox.showerror("Lỗi Magento", f"Login Magento thất bại: {e}"))
+                        self.after(0, lambda: self.btn_run.config(state="normal"))
+                        self.after(0, lambda: self.btn_stop.config(state="disabled"))
+                        return
+                
+                if not self.cached_medusa_token:
+                    base_url = (self.var_medusa_base_url.get() or "").strip().rstrip("/")
+                    email = (self.var_medusa_email.get() or "").strip()
+                    pwd = (self.var_medusa_pass.get() or "").strip()
+                    try:
+                        self.cached_medusa_token = get_medusa_token(base_url, email, pwd)
+                    except Exception as e:
+                        self._log(f"❌ Medusa Login thất bại: {e}\n")
+                        self.after(0, lambda: messagebox.showerror("Lỗi Medusa", f"Login Medusa thất bại: {e}"))
+                        self.after(0, lambda: self.btn_run.config(state="normal"))
+                        self.after(0, lambda: self.btn_stop.config(state="disabled"))
+                        return
+
+            self._log("Command:\n  " + " ".join(cmd) + "\n")
+            self._log("(Credentials được truyền qua ENV từ GUI, không hiện trên command line)\n\n")
+
             env = os.environ.copy()
             env["MAGENTO_BASE_URL"] = (self.var_magento_base_url.get() or "").strip()
             env["MAGENTO_ADMIN_USERNAME"] = (self.var_magento_user.get() or "").strip()
             env["MAGENTO_ADMIN_PASSWORD"] = (self.var_magento_pass.get() or "").strip()
             env["MAGENTO_VERIFY_SSL"] = "1" if self.var_magento_verify.get() else "0"
-
             env["MEDUSA_BASE_URL"] = (self.var_medusa_base_url.get() or "").strip()
             env["MEDUSA_EMAIL"] = (self.var_medusa_email.get() or "").strip()
             env["MEDUSA_PASSWORD"] = (self.var_medusa_pass.get() or "").strip()
 
-            if self.cached_magento_token:
-                env["MAGENTO_TOKEN"] = self.cached_magento_token
-            if self.cached_medusa_token:
-                env["MEDUSA_TOKEN"] = self.cached_medusa_token
-
+            if self.cached_magento_token: env["MAGENTO_TOKEN"] = self.cached_magento_token
+            if self.cached_medusa_token: env["MEDUSA_TOKEN"] = self.cached_medusa_token
 
             self._proc = subprocess.Popen(
                 cmd,
@@ -772,15 +852,15 @@ class MigrationGUI(tk.Tk):
                 env=env,
                 bufsize=1,
             )
-        except FileNotFoundError:
-            messagebox.showerror("Không tìm thấy Python", "Không tìm thấy Python để chạy. Hãy chạy bằng đúng môi trường Python.")
-            return
 
-        self.btn_run.config(state="disabled")
-        self.btn_stop.config(state="normal")
+            # Start reader thread as before
+            self._reader_thread = threading.Thread(target=self._reader, daemon=True)
+            self._reader_thread.start()
 
-        self._reader_thread = threading.Thread(target=self._reader, daemon=True)
-        self._reader_thread.start()
+        except Exception as ex:
+            self._log(f"❌ Lỗi khởi chạy background thread: {ex}\n")
+            self.after(0, lambda: self.btn_run.config(state="normal"))
+            self.after(0, lambda: self.btn_stop.config(state="disabled"))
 
     def _reader(self):
         try:

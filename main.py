@@ -65,11 +65,17 @@ def _parse_args():
         help="Chỉ in payload (không gọi API create lên Medusa)",
     )
     parser.add_argument(
+        "--dry-run-file",
+        action="store_true",
+        help="Lưu kết quả dry-run vào file json",
+    )
+    parser.add_argument(
         "--finalize-orders",
         action="store_true",
         help="Sau khi tạo Draft Order, thử confirm để chuyển thành Order (nếu Medusa hỗ trợ).",
     )
  
+    parser.add_argument("--run-id", default=None, help="Mã ID cho lần chạy (dùng cho tên file export)")
     parser.add_argument("--product-ids", default=None, help="Comma separated list of product IDs to sync")
     parser.add_argument("--category-ids", default=None, help="Comma separated list of category IDs to sync")
     parser.add_argument("--order-ids", default=None, help="Comma separated list of order IDs to sync")
@@ -116,6 +122,7 @@ def main():
     print(f"Medusa  base_url={medusa_cfg.get('BASE_URL')} email={medusa_cfg.get('EMAIL')}")
 
     # --- CONNECT SETUP ---
+    print("\n[STAGE 1/5] 🔐 LOGIN & AUTHENTICATION")
     print("🔐 Login Magento...")
     magento_token = _env("MAGENTO_TOKEN")
     if magento_token:
@@ -128,6 +135,7 @@ def main():
                 magento_cfg["ADMIN_PASSWORD"],
                 magento_cfg["VERIFY_SSL"],
             )
+            print("✅ Login Magento thành công")
         except requests.exceptions.RequestException as e:
             print("\n❌ Không kết nối được Magento.")
             print(f"- base_url: {magento_cfg.get('BASE_URL')}")
@@ -145,6 +153,7 @@ def main():
             medusa_token = get_medusa_token(
                 medusa_cfg["BASE_URL"], medusa_cfg["EMAIL"], medusa_cfg["PASSWORD"]
             )
+            print("✅ Login Medusa thành công")
         except requests.exceptions.RequestException as e:
             print("\n❌ Không kết nối được Medusa.")
             print(f"- base_url: {medusa_cfg.get('BASE_URL')}")
@@ -152,6 +161,9 @@ def main():
             return
 
     medusa = MedusaConnector(base_url=medusa_cfg["BASE_URL"], api_token=medusa_token)
+
+    print("\n[STAGE 2/5] 🔌 API CONNECTION SETUP")
+    print("✅ Magento & Medusa connections initialized.")
 
     # --- MIGRATION STEPS ---
     

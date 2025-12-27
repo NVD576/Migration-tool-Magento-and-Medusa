@@ -66,3 +66,37 @@ def _fetch_all_variants(medusa: MedusaConnector, page_limit: int = 50):
         if count is not None and offset >= count:
             break
     return out
+
+def log_dry_run(payload, entity_type, args):
+    import json
+    import os
+    
+    # Print to console only if dry run
+    if getattr(args, "dry_run", False):
+        print(json.dumps(payload, ensure_ascii=False, indent=2))
+    
+    # Write to file if flag is set
+    if getattr(args, "dry_run_file", False):
+        run_id = getattr(args, "run_id", "latest")
+        
+        # Ensure exports directory exists
+        if not os.path.exists("exports"):
+            os.makedirs("exports")
+            
+        filename = f"exports/payloads_{run_id}.json"
+        
+        data = []
+        if os.path.exists(filename):
+            try:
+                with open(filename, "r", encoding="utf-8") as f:
+                    data = json.load(f)
+            except:
+                data = []
+        
+        data.append({
+            "entity": entity_type,
+            "payload": payload
+        })
+        
+        with open(filename, "w", encoding="utf-8") as f:
+            json.dump(data, f, ensure_ascii=False, indent=2)

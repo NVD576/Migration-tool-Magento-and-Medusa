@@ -97,3 +97,7 @@ class MedusaConnector(BaseConnector):
         # Endpoint chính xác cho Medusa v2 (trigger workflow convert-draft-order)
         endpoint = f"admin/draft-orders/{draft_order_id}/convert-to-order"
         return self._request("POST", endpoint, json={})
+    def create_customer_address(self, customer_id, address):
+        # Medusa v2: POST /admin/customers/{id}/addresses
+        endpoint = f"admin/customers/{customer_id}/addresses"
+        return self._request("POST", endpoint, json=address)

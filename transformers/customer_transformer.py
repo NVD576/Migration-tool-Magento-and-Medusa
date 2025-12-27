@@ -27,4 +27,36 @@ def transform_customer(mg_customer: dict) -> dict:
 
     return payload
 
+def transform_address(mg_address: dict) -> dict:
+    street = mg_address.get("street") or []
+    # Ghép tất cả các dòng street thành 1 chuỗi cho address_1
+    full_address = ", ".join(street) if isinstance(street, list) else str(street)
+    
+    payload = {
+        "first_name": mg_address.get("firstname"),
+        "last_name": mg_address.get("lastname"),
+        "company": mg_address.get("company") or "",
+        "address_1": full_address,
+        "address_2": "",
+        "city": mg_address.get("city") or "",
+        "country_code": (mg_address.get("country_id") or "VN").lower(),
+        "phone": mg_address.get("telephone") or "",
+        "postal_code": mg_address.get("postcode") or "",
+        "is_default_shipping": mg_address.get("default_shipping") or False,
+        "is_default_billing": mg_address.get("default_billing") or False,
+    }
 
+    # Handle province from region
+    region_data = mg_address.get("region")
+    if isinstance(region_data, dict):
+        payload["province"] = region_data.get("region") or ""
+    else:
+        payload["province"] = str(mg_address.get("region") or "")
+
+    # Metadata
+    metadata = {
+        "magento_address_id": mg_address.get("id"),
+    }
+    payload["metadata"] = {k: v for k, v in metadata.items() if v is not None}
+
+    return payload

@@ -11,4 +11,3 @@ MEDUSA = {
     "PASSWORD": "123",
     "SALES_CHANNEL": "Default Sales Channel",
 }
-
