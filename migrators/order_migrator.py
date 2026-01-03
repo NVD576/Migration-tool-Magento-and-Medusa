@@ -12,7 +12,7 @@ from migrators.utils import (
 
 def _sync_single_order(order, medusa: MedusaConnector, args, region_id, sku_map, shipping_option):
     inc = order.get("increment_id") or order.get("entity_id")
-    print(f"➡ Syncing order: {inc}")
+    print(f"Syncing order: {inc}")
 
     print(f"   [STEP 1] Mapping data & SKUs...")
     payload = transform_order(order, region_id, sku_map, shipping_option)
@@ -48,9 +48,9 @@ def _sync_single_order(order, medusa: MedusaConnector, args, region_id, sku_map,
                         print(f"   Status: {fe.response.status_code}")
                         print(fe.response.text)
         elif draft_id:
-            print(f"   ✅ [SUCCESS] Created Draft Order: {draft_id} (Not finalized)")
+            print(f"   [SUCCESS] Created Draft Order: {draft_id} (Not finalized)")
         else:
-            print("   ✅ [SUCCESS] Created Draft Order (unknown ID)")
+            print("   [SUCCESS] Created Draft Order (unknown ID)")
         
         return ('success', None)
 
@@ -59,7 +59,7 @@ def _sync_single_order(order, medusa: MedusaConnector, args, region_id, sku_map,
         return status_tuple if isinstance(status_tuple, tuple) else (status_tuple, str(e))
     except Exception as e:
         reason = str(e)
-        print(f"   ❌ [FAIL] Order '{inc}': {reason}")
+        print(f"   [FAIL] Order '{inc}': {reason}")
         return ('fail', reason)
 
 def migrate_orders(magento: MagentoConnector, medusa: MedusaConnector, args):
@@ -88,13 +88,13 @@ def migrate_orders(magento: MagentoConnector, medusa: MedusaConnector, args):
         region_id = None
 
     if not region_id:
-        print("⚠️ Could not get region_id from Medusa (/admin/regions). Skipping orders.")
+        print("Could not get region_id from Medusa (/admin/regions). Skipping orders.")
         return
 
     print("🔍 Fetching existing variants from Medusa...")
     all_variants = _fetch_all_variants(medusa)
     sku_map = {v.get("sku"): v.get("id") for v in all_variants if v.get("sku") and v.get("id")}
-    print(f"✅ Found {len(sku_map)} variants for mapping.\n")
+    print(f"Found {len(sku_map)} variants for mapping.\n")
 
     print("🚚 Fetching shipping options...")
     shipping_option = None
@@ -104,17 +104,17 @@ def migrate_orders(magento: MagentoConnector, medusa: MedusaConnector, args):
         if so_items:
             so = so_items[0]
             shipping_option = {"id": so.get("id"), "name": so.get("name") or "Standard Shipping"}
-            print(f"✅ Using shipping option: {shipping_option['id']} ({shipping_option['name']})")
+            print(f"Using shipping option: {shipping_option['id']} ({shipping_option['name']})")
         else:
-            print("⚠️ No shipping options found. Order finalization might fail.")
+            print("No shipping options found. Order finalization might fail.")
     except Exception as e:
-        print(f"⚠️ Failed to fetch shipping options: {e}")
+        print(f"Failed to fetch shipping options: {e}")
 
     count_success = 0
     count_ignore = 0
     count_fail = 0
 
-    print("⚙️ Starting transformation & sync process...")
+    print("Starting transformation & sync process...")
 
     with ThreadPoolExecutor(max_workers=args.max_workers or 10) as executor:
         futures = {

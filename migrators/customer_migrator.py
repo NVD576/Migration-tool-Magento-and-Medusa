@@ -12,7 +12,7 @@ def _sync_single_customer(customer, medusa: MedusaConnector, args):
     if not email:
         return 'fail'
 
-    print(f"➡ Syncing customer: {email}")
+    print(f"Syncing customer: {email}")
     print(f"   [STEP 1] Preparing info...")
     payload = transform_customer(customer)
 
@@ -25,7 +25,7 @@ def _sync_single_customer(customer, medusa: MedusaConnector, args):
         res = medusa.create_customer(payload, idempotency_key=f"customer:{email}")
         created = res.get("customer") or res
         medusa_customer_id = created.get("id") if isinstance(created, dict) else None
-        print(f"   ✅ [SUCCESS] Customer: {email}")
+        print(f"   [SUCCESS] Customer: {email}")
 
         if medusa_customer_id:
             for addr in customer.get("addresses", []):
@@ -34,7 +34,7 @@ def _sync_single_customer(customer, medusa: MedusaConnector, args):
                     medusa.create_customer_address(medusa_customer_id, addr_payload)
                     print(f"      - Address synced: {addr_payload.get('address_1')}")
                 except Exception as ae:
-                    print(f"      ⚠️  Address skip: {ae}")
+                    print(f"      Address skip: {ae}")
         
         return ('success', None)
 
@@ -43,7 +43,7 @@ def _sync_single_customer(customer, medusa: MedusaConnector, args):
         return status_tuple if isinstance(status_tuple, tuple) else (status_tuple, str(e))
     except Exception as e:
         reason = str(e)
-        print(f"   ❌ [FAIL] Customer '{email}': {reason}")
+        print(f"   [FAIL] Customer '{email}': {reason}")
         return ('fail', reason)
 
 def migrate_customers(magento: MagentoConnector, medusa: MedusaConnector, args):
@@ -66,7 +66,7 @@ def migrate_customers(magento: MagentoConnector, medusa: MedusaConnector, args):
     count_ignore = 0
     count_fail = 0
 
-    print("⚙️ Starting transformation & sync process...")
+    print("Starting transformation & sync process...")
 
     with ThreadPoolExecutor(max_workers=args.max_workers or 10) as executor:
         futures = {executor.submit(_sync_single_customer, c, medusa, args): c for c in customers}
@@ -99,7 +99,9 @@ def migrate_customers(magento: MagentoConnector, medusa: MedusaConnector, args):
 
 
     print("\n\n--- Customer Migration Summary ---")
-    print(f"✅ Success: {count_success}")
-    print(f"ℹ️ Ignored: {count_ignore}")
-    print(f"❌ Failed:  {count_fail}")
+    log_summary("Customer", count_success, count_ignore, count_fail)
+    
+    print(f"Success: {count_success}")
+    print(f"Ignored: {count_ignore}")
+    print(f"Failed:  {count_fail}")
     print(f"----------------------------------\n")

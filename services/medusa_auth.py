@@ -12,7 +12,7 @@ def get_medusa_token(base_url, email, password, logger=print):
                 "email": email,
                 "password": password
             },
-            timeout=15
+            timeout=60
         )
         response.raise_for_status()
         token = response.json().get("token")

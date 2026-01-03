@@ -1,140 +1,94 @@
-# Magento to Medusa Data Migration Tool
+# Công Cụ Di Chuyển Dữ Liệu Magento 2 sang MedusaJS
 
-Công cụ hỗ trợ di chuyển dữ liệu (Products, Categories, Customers, Orders) từ Magento 2 sang MedusaJS. Ứng dụng cung cấp cả giao diện đồ họa (GUI) và giao diện dòng lệnh (CLI) để thuận tiện cho việc sử dụng.
+Công cụ chuyên dụng để di chuyển dữ liệu (Sản phẩm, Danh mục, Khách hàng, Đơn hàng) từ Magento 2 sang MedusaJS. Phiên bản mới nhất hỗ trợ chạy trên nền tảng **Web**, đóng gói bằng **Docker**, giao diện thân thiện và log thời gian thực chi tiết.
 
-## Tính năng
+## 🚀 Tính Năng Chính
 
-- **Giao diện đồ họa (GUI):** Giao diện trực quan để dễ dàng cấu hình và thực thi di chuyển dữ liệu.
-- **Giao diện dòng lệnh (CLI):** Hỗ trợ chạy tự động và tích hợp vào các script.
-- **Di chuyển các thực thể:**
-  - Products (Sản phẩm)
-  - Categories (Danh mục)
-  - Customers (Khách hàng)
-  - Orders (Đơn hàng)
-- **Cấu hình linh hoạt:** Cấu hình thông tin kết nối qua tệp `config.py`, biến môi trường hoặc trực tiếp trên GUI.
-- **Test kết nối:** Chức năng kiểm tra kết nối tới Magento và Medusa trước khi chạy.
-- **Lựa chọn dữ liệu:** Hỗ trợ di chuyển toàn bộ hoặc chỉ chọn các ID cụ thể.
-- **Dry-run:** Chế độ chạy thử để xem trước payload dữ liệu mà không ghi vào Medusa.
-- **Ghi log thời gian thực:** Theo dõi tiến trình di chuyển trực tiếp trên GUI.
+*   **Web Interface (Mới):** Giao diện web hiện đại, dễ sử dụng, cho phép cấu hình và theo dõi log realtime.
+*   **Dockerized:** Dễ dàng triển khai chỉ với 1 lệnh `docker-compose up`.
+*   **Clean Logs:** Hệ thống log được tối ưu, loại bỏ icon rác và căn chỉnh thẳng hàng, dễ đọc.
+*   **Hỗ trợ `localhost`:** Tự động xử lý kết nối tới `localhost` của máy chủ ngay cả khi chạy trong Docker container.
+*   **Chọn lọc thực thể:** Di chuyển toàn bộ hoặc chọn cụ thể từng ID (Sản phẩm, Đơn hàng, Khách hàng...).
+*   **Resume/Skip:** Tự động bỏ qua các bản ghi đã tồn tại hoặc bị lỗi, không làm gián đoạn quá trình.
 
-## Yêu cầu
+## 🛠 Yêu Cầu
 
-- **Python 3.8+**
-- **Git**
-- **Tkinter** (Thường đi kèm với Python. Nếu không, cài đặt bằng lệnh: `sudo apt-get install python3-tk` trên Debian/Ubuntu)
+*   **Docker** và **Docker Compose** (Khuyên dùng)
+*   Hoặc **Python 3.11+** nếu chạy trực tiếp (Manual).
 
-## Cài đặt
+## 📦 Cài Đặt & Chạy (Docker - Khuyên dùng)
 
-1.  **Clone kho mã nguồn:**
+Đây là cách nhanh nhất và ổn định nhất để chạy công cụ.
 
-    ```sh
+1.  **Clone dự án:**
+    ```bash
     git clone https://github.com/NVD576/Migration-tool-Magento-and-Medusa.git
     cd Migration-tool-Magento-and-Medusa
     ```
 
-2.  **Tạo và kích hoạt môi trường ảo (khuyến nghị):**
-
-    ```sh
-    python -m venv venv
-    # Trên Windows
-    .\venv\Scripts\activate
-    # Trên macOS/Linux
-    source venv/bin/activate
+2.  **Khởi chạy Docker:**
+    ```bash
+    docker-compose up --build
     ```
 
-3.  **Cài đặt các thư viện cần thiết:**
-    ```sh
+3.  **Truy cập Web Interface:**
+    Mở trình duyệt và truy cập: [http://localhost:5000](http://localhost:5000)
+
+4.  **Sử dụng `localhost`?**
+    Nếu Medusa hoặc Magento của bạn chạy ở `localhost` (trên máy chủ), cứ điền URL là `http://localhost:9000` hoặc `http://127.0.0.1`. Hệ thống sẽ tự động chuyển đổi nó thành `host.docker.internal` để container có thể kết nối được.
+
+## 💻 Cấu Hình Trên Web
+
+Tại giao diện Web `http://localhost:5000`:
+
+1.  **Cấu hình Magento:**
+    *   **Base URL:** Ví dụ `https://magento.example.com`
+    *   **Username/Password:** Tài khoản Admin.
+    *   **SSL:** Tick chọn nếu site có HTTPS hợp lệ, hoặc bỏ chọn nếu là dev/self-signed.
+
+2.  **Cấu hình Medusa:**
+    *   **Base URL:** Ví dụ `http://localhost:9000` (sẽ được tự động fix nếu chạy Docker).
+    *   **Email/Password:** Tài khoản Admin Medusa.
+
+3.  **Chọn Dữ Liệu:**
+    *   Tick chọn các mục muốn di chuyển (Products, Categories, Customers, Orders).
+    *   Nhập ID cụ thể (ngăn cách bằng dấu phẩy) nếu chỉ muốn test một vài bản ghi.
+
+4.  **Chạy:** Bấm **RUN MIGRATION** và xem log chạy trực tiếp ở cột bên phải.
+
+## 🔧 Chạy Thủ Công (Cho Dev/Debug)
+
+Nếu không muốn dùng Docker, bạn có thể chạy trực tiếp bằng Python:
+
+1.  **Cài đặt thư viện:**
+    ```bash
     pip install -r requirements.txt
     ```
 
-## Cấu hình
+2.  **Chạy Web Server:**
+    ```bash
+    python app_web.py
+    ```
+    Truy cập `http://localhost:5000`.
 
-Bạn có thể cấu hình thông tin kết nối tới Magento và Medusa theo một trong các cách sau:
+3.  **Hoặc chạy CLI (Command Line):**
+    ```bash
+    # Di chuyển 10 sản phẩm
+    python main.py --entities products --limit 10
 
-1.  **Tệp `config.py` (Mặc định):**
-    Chỉnh sửa tệp `config.py` để cung cấp thông tin mặc định.
-
-    ```python
-    # config.py
-    MAGENTO = {
-        "BASE_URL": "https://your-magento.store",
-        "ADMIN_USERNAME": "admin",
-            "ADMIN_PASSWORD": "your_admin_password",
-            "VERIFY_SSL": False,
-        }
-
-        MEDUSA = {
-            "BASE_URL": "http://localhost:9000",
-            "EMAIL": "your_admin_email@example.com",
-            "PASSWORD": "your_medusa_password",
-            "SALES_CHANNEL": "Default Sales Channel",
-    }
+    # Di chuyển đơn hàng cụ thể
+    python main.py --entities orders --order-ids 1001,1002
     ```
 
-2.  **Giao diện đồ họa (GUI):**
-    Chạy `app_gui.py` và bấm vào nút **"▼ Hiện cấu hình"** để nhập thông tin trực tiếp. Thông tin này sẽ ghi đè lên cấu hình từ `config.py`.
+## 📂 Cấu Trúc Dự Án
 
-3.  **Biến môi trường (cho CLI):**
-    Khi chạy `main.py`, các biến môi trường sau sẽ được ưu tiên:
-    - `MAGENTO_BASE_URL`, `MAGENTO_ADMIN_USERNAME`, `MAGENTO_ADMIN_PASSWORD`, `MAGENTO_VERIFY_SSL`
-    - `MEDUSA_BASE_URL`, `MEDUSA_EMAIL`, `MEDUSA_PASSWORD`
+*   `app_web.py`: Backend Flask cho giao diện Web.
+*   `app_gui.py`: Giao diện Desktop (Legacy Tkinter).
+*   `main.py`: Entry point cho CLI.
+*   `templates/index.html`: Giao diện người dùng Web.
+*   `migrators/`: Logic chính để di chuyển dữ liệu.
+*   `transformers/`: Chuyển đổi dữ liệu từ cấu trúc Magento sang Medusa.
+*   `services/`: Auth service (Login lấy token).
+*   `config.py`: File cấu hình mặc định (được Web UI ghi đè khi chạy).
 
-## Hướng dẫn sử dụng
-
-### 1. Chế độ Giao diện đồ họa (GUI)
-
-Đây là cách sử dụng đơn giản và được khuyến nghị.
-
-```sh
-python app_gui.py
-```
-
-- **Chọn dữ liệu:** Tích vào các ô `Products`, `Categories`, v.v. để chọn loại dữ liệu cần di chuyển.
-- **Lọc theo ID (Tùy chọn):** Nhập danh sách các ID (cách nhau bởi dấu phẩy) hoặc dùng nút **"Chọn..."** để lấy và chọn từ danh sách.
-- **Cấu hình:** Mở rộng mục cấu hình để nhập hoặc xác nhận thông tin đăng nhập. Dùng nút **"Test..."** để đảm bảo kết nối thành công.
-- **Chạy:** Nhấn nút **"Run"** để bắt đầu. Theo dõi tiến trình trong cửa sổ log.
-
-### 2. Chế độ Dòng lệnh (CLI)
-
-Sử dụng `main.py` cho các tác vụ tự động.
-
-```sh
-python main.py [OPTIONS]
-```
-
-**Các tùy chọn (OPTIONS) chính:**
-
-- `--entities`: Các loại dữ liệu cần di chuyển, cách nhau bởi dấu phẩy (vd: `products,customers`). Mặc định là tất cả.
-- `--limit <số>`: Giới hạn số lượng đối tượng cho mỗi loại. `0` là không giới hạn.
-- `--product-ids <id1,id2>`: Chỉ di chuyển các sản phẩm có ID này.
-- `--category-ids <id1,id2>`: Chỉ di chuyển các danh mục có ID này.
-- `--customer-ids <id1,id2>`: Chỉ di chuyển các khách hàng có ID này.
-- `--order-ids <id1,id2>`: Chỉ di chuyển các đơn hàng có ID này.
-- `--dry-run`: Chạy thử, chỉ in ra payload mà không thực sự tạo dữ liệu trên Medusa.
-
-**Ví dụ:**
-
-- Di chuyển 10 sản phẩm và tất cả danh mục:
-  ```sh
-  python main.py --entities products,categories --limit 10
-  ```
-- Chỉ di chuyển sản phẩm có ID là 123 và 456:
-  ```sh
-  python main.py --entities products --product-ids 123,456
-  ```
-
-## Cấu trúc dự án
-
-```
-├── connectors/   # Module giao tiếp API với Magento và Medusa
-├── extractors/   # Module trích xuất dữ liệu từ Magento
-├── transformers/ # Module chuyển đổi dữ liệu từ định dạng Magento sang Medusa
-├── migrators/    # Module điều phối quá trình di chuyển (extract-transform-load)
-├── services/     # Module xác thực, lấy token
-├── config/       # Chứa các file cấu hình mẫu
-├── app_gui.py    # Entry point cho ứng dụng GUI
-├── main.py       # Entry point cho ứng dụng CLI
-├── config.py     # File cấu hình chính
-└── README.md     # Tài liệu hướng dẫn
-```
 

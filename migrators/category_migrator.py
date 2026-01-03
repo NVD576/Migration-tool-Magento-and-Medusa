@@ -27,10 +27,10 @@ def _sync_single_category(cat, medusa: MedusaConnector, args, mg_to_medusa_map, 
     if parent_mg_id and parent_mg_id not in (1, "1"):
         parent_medusa_id = mg_to_medusa_map.get(parent_mg_id) or mg_to_medusa_map.get(str(parent_mg_id))
         if not parent_medusa_id:
-            print(f"   ⚠️ Parent category {parent_mg_id} for {name} not found. Deferring.")
+            print(f"   Parent category {parent_mg_id} for {name} not found. Deferring.")
             return mg_id, None, 'defer', None
 
-    print(f"➡ Syncing category: {name}")
+    print(f"Syncing category: {name}")
 
     print(f"   [STEP 1] Preparing data...")
     payload_pc = transform_category_as_product_category(cat, parent_category_id=parent_medusa_id)
@@ -42,7 +42,7 @@ def _sync_single_category(cat, medusa: MedusaConnector, args, mg_to_medusa_map, 
     
     existing_id = handle_to_id_map.get(handle)
     if existing_id:
-        print(f"   ℹ️ [SKIP] Category '{name}' handle '{handle}' already exists.")
+        print(f"   [SKIP] Category '{name}' handle '{handle}' already exists.")
         return mg_id, existing_id, 'ignore', handle
 
     try:
@@ -65,7 +65,9 @@ def _sync_single_category(cat, medusa: MedusaConnector, args, mg_to_medusa_map, 
         return mg_id, None, status, handle
     except Exception as e:
         reason = str(e)
-        print(f"   ❌ [FAIL] Category {name}: {reason}")
+    except Exception as e:
+        reason = str(e)
+        print(f"   [FAIL] Category {name}: {reason}")
         return mg_id, None, 'fail', handle
 
 def migrate_categories(magento: MagentoConnector, medusa: MedusaConnector, args):
@@ -166,9 +168,11 @@ def migrate_categories(magento: MagentoConnector, medusa: MedusaConnector, args)
             print(f"  - {cat.get('name')} (ID: {cat.get('id')})")
     
     print(f"\n--- Category Migration Summary ---")
-    print(f"✅ Success: {count_success}")
-    print(f"ℹ️ Ignored: {count_ignore}")
-    print(f"❌ Failed:  {count_fail}")
+    log_summary("Category", count_success, count_ignore, count_fail)
+    
+    print(f"Success: {count_success}")
+    print(f"Ignored: {count_ignore}")
+    print(f"Failed:  {count_fail}")
     print(f"----------------------------------\n")
 
     return mg_to_medusa
