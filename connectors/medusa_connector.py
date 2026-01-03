@@ -58,13 +58,11 @@ class MedusaConnector(BaseConnector):
         return self._request("GET", endpoint, params=params)
 
     def get_sales_channels(self, limit=50, offset=0):
-        """Fetch all sales channels from Medusa"""
         endpoint = "admin/sales-channels"
         params = {"limit": limit, "offset": offset}
         return self._request("GET", endpoint, params=params)
 
     def get_shipping_profiles(self, limit=50, offset=0):
-        """Fetch all shipping profiles from Medusa"""
         endpoint = "admin/shipping-profiles"
         params = {"limit": limit, "offset": offset}
         return self._request("GET", endpoint, params=params)
@@ -80,24 +78,16 @@ class MedusaConnector(BaseConnector):
         return self._request("POST", endpoint, json=order, headers=headers)
 
     def create_fulfillment(self, order_id, items):
-        # Medusa v2 endpoint for fulfillment
         endpoint = f"admin/orders/{order_id}/fulfillments"
         payload = {"items": items}
         return self._request("POST", endpoint, json=payload)
 
     def capture_payment(self, order_id):
-        # Medusa v2: Trigger capture for the order's payment collection
-        # Note: This might require fetching the order first to get payment_collection_id
-        # For simplicity, we try the order-level capture if available, or assume the user handles it manually
-        # as programmatic capture without a payment provider can be complex.
-        # Alternatively, we can try marking it as paid via metadata or custom status.
         return None
 
     def finalize_draft_order(self, draft_order_id):
-        # Endpoint chính xác cho Medusa v2 (trigger workflow convert-draft-order)
         endpoint = f"admin/draft-orders/{draft_order_id}/convert-to-order"
         return self._request("POST", endpoint, json={})
     def create_customer_address(self, customer_id, address):
-        # Medusa v2: POST /admin/customers/{id}/addresses
         endpoint = f"admin/customers/{customer_id}/addresses"
         return self._request("POST", endpoint, json=address)

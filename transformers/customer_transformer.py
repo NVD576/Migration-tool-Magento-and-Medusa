@@ -2,14 +2,13 @@ def transform_customer(mg_customer: dict) -> dict:
     email = (mg_customer.get("email") or "").strip()
     first_name = (mg_customer.get("firstname") or "").strip()
     last_name = (mg_customer.get("lastname") or "").strip()
-
+    
     payload = {"email": email}
     if first_name:
         payload["first_name"] = first_name
     if last_name:
         payload["last_name"] = last_name
-
-    # metadata để trace; loại bỏ key None cho gọn payload
+    
     metadata = {
         "magento_id": mg_customer.get("id"),
         "magento_group_id": mg_customer.get("group_id"),
@@ -18,7 +17,6 @@ def transform_customer(mg_customer: dict) -> dict:
     }
     payload["metadata"] = {k: v for k, v in metadata.items() if v is not None}
 
-    # Magento thường có addresses; phone hay nằm trong địa chỉ.
     addresses = mg_customer.get("addresses") or []
     if addresses and isinstance(addresses, list):
         phone = addresses[0].get("telephone")
@@ -29,7 +27,6 @@ def transform_customer(mg_customer: dict) -> dict:
 
 def transform_address(mg_address: dict) -> dict:
     street = mg_address.get("street") or []
-    # Ghép tất cả các dòng street thành 1 chuỗi cho address_1
     full_address = ", ".join(street) if isinstance(street, list) else str(street)
     
     payload = {
@@ -46,14 +43,12 @@ def transform_address(mg_address: dict) -> dict:
         "is_default_billing": mg_address.get("default_billing") or False,
     }
 
-    # Handle province from region
     region_data = mg_address.get("region")
     if isinstance(region_data, dict):
         payload["province"] = region_data.get("region") or ""
     else:
         payload["province"] = str(mg_address.get("region") or "")
 
-    # Metadata
     metadata = {
         "magento_address_id": mg_address.get("id"),
     }

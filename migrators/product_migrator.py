@@ -1,67 +1,117 @@
 import json
 import requests
+from concurrent.futures import ThreadPoolExecutor, as_completed
 from connectors.magento_connector import MagentoConnector
 from connectors.medusa_connector import MedusaConnector
 from extractors.products import extract_products
 from extractors.categories import extract_categories
 from transformers.product_transformer import transform_product
 from transformers.category_transformer import transform_category_as_product_category
-from migrators.utils import _limit_iter, _is_duplicate_http, _resp_json_or_text, _fetch_all_product_categories, _is_http_status, log_dry_run
+from migrators.utils import (
+    _limit_iter, _is_duplicate_http, _resp_json_or_text, 
+    _fetch_all_product_categories, _is_http_status, log_dry_run,
+    handle_medusa_api_error, log_info, log_success, log_warning, 
+    log_error, log_step, log_progress, log_section, log_summary, get_timestamp
+)
 
-def _fetch_all_magento_categories(magento: MagentoConnector):
-    print("   Please wait, fetching all Magento categories for mapping...")
-    all_cats = extract_categories(magento)
+def _fetch_all_magento_categories(magento: MagentoConnector, args):
+    log_info("Fetching Magento categories for mapping...", indent=1)
+    all_cats = extract_categories(magento, args)
     cat_map = {c.get("id"): c for c in all_cats}
-    print(f"   Fetched {len(cat_map)} categories.")
+    log_success(f"Fetched {len(cat_map)} categories successfully.", indent=1)
     return cat_map
 
-def migrate_products(magento: MagentoConnector, medusa: MedusaConnector, args, mg_to_medusa_map=None):
-    print("\n[STAGE 3/5] 📥 DATA EXTRACTION & FETCHING")
-    print("📦 Fetching products from Magento...")
+def _sync_single_product(product, magento: MagentoConnector, medusa: MedusaConnector, args, mg_to_medusa_map, mg_category_map, sales_channel_id, shipping_profile_id):
+    product_name = product.get('name', 'N/A')
+    product_sku = product.get('sku', 'N/A')
+    print(f"[{get_timestamp()}] ➡ Syncing: {product_name} (SKU: {product_sku})")
+
+    product_categories = []
+    links = (product.get("extension_attributes") or {}).get("category_links") or []
     
-    # Parse product_ids from args
+    for link in links:
+        mg_cat_id = link.get("category_id")
+        if mg_cat_id in (1, "1"): continue
+
+        medusa_cat_id = mg_to_medusa_map.get(mg_cat_id) or mg_to_medusa_map.get(str(mg_cat_id)) or mg_to_medusa_map.get(int(mg_cat_id))
+        
+        if not medusa_cat_id:
+            mg_cat = mg_category_map.get(str(mg_cat_id)) or mg_category_map.get(int(mg_cat_id))
+            name = mg_cat.get("name") if mg_cat else f"ID {mg_cat_id}"
+            log_warning(f"Category {name} (Magento ID: {mg_cat_id}) not found in Medusa map. Skipping link.", indent=1)
+        
+        if medusa_cat_id:
+            product_categories.append({"id": medusa_cat_id})
+
+    payload = transform_product(
+        product, 
+        magento.base_url, 
+        categories=product_categories,
+        sales_channel_id=sales_channel_id,
+        shipping_profile_id=shipping_profile_id
+    )
+
+    log_dry_run(payload, "product", args)
+    if args.dry_run:
+        return ('ignore', "Dry run enabled")
+
+    try:
+        medusa.create_product(payload, idempotency_key=f"product:{product.get('id')}")
+        log_success(f"Product '{product_name}' synced.", indent=1)
+        return ('success', None)
+    except requests.exceptions.HTTPError as e:
+        return handle_medusa_api_error(e, "Product", product_name)
+    except Exception as e:
+        reason = str(e)
+        log_error(f"Product '{product_name}': {reason}", indent=1)
+        return ('fail', reason)
+
+def migrate_products(magento: MagentoConnector, medusa: MedusaConnector, args, mg_to_medusa_map=None):
+    log_section("PRODUCT MIGRATION PHASE")
+    print(f"[{get_timestamp()}] 📥 Fetching products from Magento...")
+    
     p_ids = None
     if getattr(args, "product_ids", None):
         p_ids = [x.strip() for x in str(args.product_ids).split(",") if x.strip()]
-        print(f"   (Filter by IDs: {p_ids})")
+        log_info(f"Filter by IDs: {p_ids}", indent=1)
 
     products = extract_products(magento, ids=p_ids)
     products = _limit_iter(products, args.limit)
-    print(f"🚀 Migrating {len(products)} products...\n")
+    product_count = len(products)
+    print(f"[{get_timestamp()}] 🚀 Found {product_count} products to migrate...\n")
 
     mg_to_medusa = mg_to_medusa_map if mg_to_medusa_map is not None else {}
     mg_category_map = None
 
-    # Fetch sales channel and shipping profile from Medusa
     sales_channel_id = None
     shipping_profile_id = None
     
     try:
-        print("🔧 Fetching sales channels from Medusa...")
+        print(f"[{get_timestamp()}] 🔧 Fetching sales channels from Medusa...")
         sc_response = medusa.get_sales_channels()
         sales_channels = sc_response.get("sales_channels", [])
         if sales_channels:
             sales_channel_id = sales_channels[0].get("id")
-            print(f"   ✅ Using sales channel: {sales_channels[0].get('name')} ({sales_channel_id})")
+            log_success(f"Using sales channel: {sales_channels[0].get('name')} ({sales_channel_id})", indent=1)
         else:
-            print("   ⚠️  No sales channels found, using default")
+            log_warning("No sales channels found, using default", indent=1)
     except Exception as e:
-        print(f"   ⚠️  Failed to fetch sales channels: {e}. Using default.")
+        log_warning(f"Failed to fetch sales channels: {e}. Using default.", indent=1)
     
     try:
-        print("🔧 Fetching shipping profiles from Medusa...")
+        print(f"[{get_timestamp()}] 🔧 Fetching shipping profiles from Medusa...")
         sp_response = medusa.get_shipping_profiles()
         shipping_profiles = sp_response.get("shipping_profiles", [])
         if shipping_profiles:
             shipping_profile_id = shipping_profiles[0].get("id")
-            print(f"   ✅ Using shipping profile: {shipping_profiles[0].get('name')} ({shipping_profile_id})")
+            log_success(f"Using shipping profile: {shipping_profiles[0].get('name')} ({shipping_profile_id})", indent=1)
         else:
-            print("   ⚠️  No shipping profiles found, using default")
+            log_warning("No shipping profiles found, using default", indent=1)
     except Exception as e:
-        print(f"   ⚠️  Failed to fetch shipping profiles: {e}. Using default.")
+        log_warning(f"Failed to fetch shipping profiles: {e}. Using default.", indent=1)
 
     if not mg_category_map:
-        mg_category_map = _fetch_all_magento_categories(magento)
+        mg_category_map = _fetch_all_magento_categories(magento, args)
 
     if not mg_to_medusa:
         existing = _fetch_all_product_categories(medusa)
@@ -76,98 +126,43 @@ def migrate_products(magento: MagentoConnector, medusa: MedusaConnector, args, m
                  except:
                      pass
 
-    # Counters for summary
     count_success = 0
     count_ignore = 0
     count_fail = 0
 
-    print(f"\n[STAGE 4/5] ⚙️ DATA TRANSFORMATION")
-    print(f"[STAGE 5/5] 🚀 SYNCING")
-    for product in products:
-        print(f"➡ Syncing: {product['name']}")
+    print(f"[{get_timestamp()}] ⚙️ Starting transformation & sync process...")
+    
+    with ThreadPoolExecutor(max_workers=args.max_workers or 10) as executor:
+        futures = {
+            executor.submit(
+                _sync_single_product,
+                product, magento, medusa, args, mg_to_medusa, mg_category_map, sales_channel_id, shipping_profile_id
+            ): product for product in products
+        }
 
-        product_categories = []
-        links = (product.get("extension_attributes") or {}).get("category_links") or []
-        
-        if links:
-            found_ids = [l.get("category_id") for l in links]
-            # print(f"   (Tìm thấy Magento categories: {found_ids})") # Optional debug
-        
-        for link in links:
-            mg_cat_id = link.get("category_id")
-            if mg_cat_id in (1, "1"): continue
-
-            medusa_cat_id = mg_to_medusa.get(mg_cat_id) or mg_to_medusa.get(str(mg_cat_id)) or mg_to_medusa.get(int(mg_cat_id))
+        processed_count = 0
+        for future in as_completed(futures):
+            processed_count += 1
+            product = futures[future]
+            product_name = product.get('name', 'N/A')
             
-            if not medusa_cat_id:
-                 mg_cat = mg_category_map.get(str(mg_cat_id)) or mg_category_map.get(int(mg_cat_id))
-                 if mg_cat:
-                     name = mg_cat.get("name")
-                     if args.dry_run:
-                         medusa_cat_id = f"(dry-run) {name}"
-                         mg_to_medusa[mg_cat_id] = medusa_cat_id
-                         print(f"   ⚠️ Category {mg_cat_id} ({name}) chưa được map. Sẽ tạo nếu chạy thật.")
-                     else:
-                         print(f"   ⚠️ Category {mg_cat_id} ({name}) chưa được map. Đang tạo on-the-fly...")
-                         payload_pc = transform_category_as_product_category(mg_cat, parent_category_id=None)
-                         
-                         try:
-                             res = medusa.create_product_category(payload_pc, idempotency_key=f"category:{mg_cat_id}")
-                             created = res.get("product_category") or res.get("productCategory") or res
-                             medusa_cat_id = created.get("id")
-                             if medusa_cat_id:
-                                 mg_to_medusa[mg_cat_id] = medusa_cat_id
-                                 print(f"   ✅ Đã tạo category: {name} ({medusa_cat_id})")
-                         except requests.exceptions.HTTPError as he:
-                             print(f"   ❌ Lỗi tự động tạo category {mg_cat_id}: {he}")
-                             if he.response is not None:
-                                 print(f"   Response: {he.response.text}")
-                         except Exception as e:
-                             print(f"   ❌ Lỗi tự động tạo category {mg_cat_id}: {e}")
-                 else:
-                     print(f"   ⚠️ Không tìm thấy thông tin category {mg_cat_id} trong Magento.")
-            
-            if medusa_cat_id:
-                product_categories.append({"id": medusa_cat_id})
-
-        payload = transform_product(
-            product, 
-            magento.base_url, 
-            categories=product_categories,
-            sales_channel_id=sales_channel_id,
-            shipping_profile_id=shipping_profile_id
-        )
-
-        log_dry_run(payload, "product", args)
-        if args.dry_run:
-            continue
-
-        try:
-            medusa.create_product(payload, idempotency_key=f"product:{product.get('id')}")
-            print("✅ Đã tạo sản phẩm")
-            count_success += 1
-        except requests.exceptions.HTTPError as e:
-            resp = getattr(e, "response", None)
-            if _is_duplicate_http(resp):
-                print("ℹ️  Sản phẩm đã tồn tại, bỏ qua")
-                count_ignore += 1
-                continue
-            if resp is not None and resp.status_code in (400, 422):
-                print("❌ Tạo product thất bại (Bad Request).")
-                detail = _resp_json_or_text(resp)
-                print(json.dumps(detail, ensure_ascii=False, indent=2) if isinstance(detail, (dict, list)) else str(detail))
+            try:
+                res_tuple = future.result()
+                if isinstance(res_tuple, tuple):
+                    status, reason = res_tuple
+                else:
+                    status, reason = res_tuple, None
+                    
+                if status == 'success':
+                    count_success += 1
+                elif status == 'ignore':
+                    count_ignore += 1
+                else: 
+                    count_fail += 1
+            except Exception as e:
+                log_error(f"[CRITICAL] Unexpected error for '{product_name}': {e}", indent=1)
                 count_fail += 1
-                continue
-            raise
-        except Exception as e:
-            if _is_http_status(e, 409):
-                count_ignore += 1
-                continue
-            count_fail += 1
-            raise
+            
 
-    print(f"\n--- Product Migration Summary ---")
-    print(f"✅ Success: {count_success}")
-    print(f"ℹ️  Ignored: {count_ignore}")
-    print(f"❌ Failed:  {count_fail}")
-    print(f"---------------------------------\n")
+    log_summary("Product", count_success, count_ignore, count_fail)
+

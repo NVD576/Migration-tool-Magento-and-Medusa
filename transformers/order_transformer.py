@@ -60,10 +60,6 @@ def _transform_address(mg_address: dict) -> dict:
 
 
 def transform_order(mg_order: dict, region_id: str, sku_map: dict = None, shipping_option: dict = None) -> dict:
-    """
-
-    Tạo payload draft order.
-    """
 
     if sku_map is None:
 
@@ -77,30 +73,18 @@ def transform_order(mg_order: dict, region_id: str, sku_map: dict = None, shippi
 
 
     for it in mg_order.get("items", []) or []:
-
-        # Bỏ item con của bundle/configurable (nếu có)
-
         if it.get("parent_item_id"):
             continue
 
-
         title = it.get("name") or it.get("sku") or "Item"
-
         quantity = int(it.get("qty_ordered") or 0)
-
         unit_price = _to_cents(it.get("price") or it.get("base_price") or 0)
-
         sku = it.get("sku")
-
 
         if quantity <= 0:
             continue
         
-
-        # Check SKU mapping
-
         variant_id = sku_map.get(sku) if sku else None
-
 
         if variant_id:
             items.append({
@@ -113,7 +97,6 @@ def transform_order(mg_order: dict, region_id: str, sku_map: dict = None, shippi
                 },
             })
         else:
-            # Nếu không tìm thấy variant, thêm vào items như là custom item (không có variant_id)
             items.append({
                 "title": title,
                 "unit_price": unit_price,
@@ -128,7 +111,6 @@ def transform_order(mg_order: dict, region_id: str, sku_map: dict = None, shippi
     billing_address = _transform_address(mg_order.get("billing_address") or {})
 
 
-    # Magento không luôn có shipping_address trực tiếp; cố gắng lấy từ extension_attributes trước.
     shipping_address = {}
     ext = mg_order.get("extension_attributes") or {}
     shipping_assignments = ext.get("shipping_assignments") or []
@@ -138,15 +120,13 @@ def transform_order(mg_order: dict, region_id: str, sku_map: dict = None, shippi
         shipping_address = _transform_address(shipping.get("address") or {})
 
 
-    # Add shipping methods if available
     shipping_methods = []
     if shipping_option:
-        # Get shipping amount from Magento order
         shipping_amount = _to_cents(mg_order.get("shipping_amount") or 0)
         shipping_methods.append({
             "shipping_option_id": shipping_option.get("id"),
             "amount": shipping_amount,
-            "name": shipping_option.get("name") # Required by Medusa
+            "name": shipping_option.get("name")
         })
 
 
@@ -178,8 +158,6 @@ def transform_order(mg_order: dict, region_id: str, sku_map: dict = None, shippi
 
     }
 
-
-    # Loại bỏ None cho gọn payload
 
     return {k: v for k, v in payload.items() if v is not None}
 

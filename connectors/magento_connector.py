@@ -8,10 +8,9 @@ class MagentoConnector(BaseConnector):
         }
         super().__init__(base_url, headers, verify_ssl=verify_ssl)
 
-    def get_products(self, page=1, page_size=20, ids=None, fields=None):
+    def get_products(self, page=1, page_size=100, ids=None, fields=None):
         endpoint = f"rest/V1/products?searchCriteria[currentPage]={page}&searchCriteria[pageSize]={page_size}"
         if ids:
-            # Add filter for entity_id in (...)
             ids_val = ",".join(str(i) for i in ids)
             endpoint += f"&searchCriteria[filterGroups][0][filters][0][field]=entity_id" \
                         f"&searchCriteria[filterGroups][0][filters][0][value]={ids_val}" \

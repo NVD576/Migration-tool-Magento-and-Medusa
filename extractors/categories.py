@@ -1,4 +1,4 @@
-def extract_categories(magento_connector):
+def extract_categories(magento_connector, args):
     def _flatten_tree(node: dict):
         out = [node]
         for child in (node.get("children_data") or []):
@@ -9,22 +9,18 @@ def extract_categories(magento_connector):
     all_categories = []
 
     while True:
-        if hasattr(magento_connector, "get_category_tree"):
+        if args.category_strategy == "tree":
             result = magento_connector.get_category_tree()
+            if "children_data" in result:
+                all_categories.extend(_flatten_tree(result))
+            break
         else:
             result = magento_connector.get_categories(page=page)
-
-        items = result.get("items")
-        if isinstance(items, list):
+            items = result.get("items")
             if not items:
                 break
             all_categories.extend(items)
             page += 1
-            continue
-
-        if "children_data" in result:
-            all_categories.extend(_flatten_tree(result))
-        break
 
     filtered = []
     for c in all_categories:

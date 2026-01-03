@@ -1,5 +1,49 @@
 import json
+import requests
+from datetime import datetime
 from connectors.medusa_connector import MedusaConnector
+
+def get_timestamp():
+    return datetime.now().strftime("%H:%M:%S")
+
+def log_info(msg, indent=0):
+    prefix = "   " * indent
+    print(f"[{get_timestamp()}] {prefix}ℹ️  {msg}")
+
+def log_success(msg, indent=0):
+    prefix = "   " * indent
+    print(f"[{get_timestamp()}] {prefix}✅ {msg}")
+
+def log_warning(msg, indent=0):
+    prefix = "   " * indent
+    print(f"[{get_timestamp()}] {prefix}⚠️  {msg}")
+
+def log_error(msg, indent=0):
+    prefix = "   " * indent
+    print(f"[{get_timestamp()}] {prefix}❌ {msg}")
+
+def log_step(step_num, total_steps, msg, indent=0):
+    prefix = "   " * indent
+    print(f"[{get_timestamp()}] {prefix}[STEP {step_num}/{total_steps}] {msg}")
+
+def log_progress(current, total, entity_type):
+    pct = (current / total * 100) if total > 0 else 0
+    bar_len = 20
+    filled = int(bar_len * current / total) if total > 0 else 0
+    bar = "█" * filled + "░" * (bar_len - filled)
+    print(f"[{get_timestamp()}] 📊 Progress: [{bar}] {current}/{total} ({pct:.0f}%) {entity_type}")
+
+def log_section(title):
+    print(f"\n[{get_timestamp()}] {'='*50}")
+    print(f"[{get_timestamp()}] 📦 {title}")
+    print(f"[{get_timestamp()}] {'='*50}")
+
+def log_summary(entity_type, success, ignored, failed):
+    print(f"\n[{get_timestamp()}] --- {entity_type} Migration Summary ---")
+    print(f"[{get_timestamp()}] ✅ Success: {success}")
+    print(f"[{get_timestamp()}] ℹ️  Ignored: {ignored}")
+    print(f"[{get_timestamp()}] ❌ Failed:  {failed}")
+    print(f"[{get_timestamp()}] {'-'*35}")
 
 def _limit_iter(items, limit: int):
     if not limit or limit <= 0:
@@ -71,15 +115,12 @@ def log_dry_run(payload, entity_type, args):
     import json
     import os
     
-    # Print to console only if dry run
     if getattr(args, "dry_run", False):
         print(json.dumps(payload, ensure_ascii=False, indent=2))
     
-    # Write to file if flag is set
     if getattr(args, "dry_run_file", False):
         run_id = getattr(args, "run_id", "latest")
         
-        # Ensure exports directory exists
         if not os.path.exists("exports"):
             os.makedirs("exports")
             
@@ -100,3 +141,22 @@ def log_dry_run(payload, entity_type, args):
         
         with open(filename, "w", encoding="utf-8") as f:
             json.dump(data, f, ensure_ascii=False, indent=2)
+
+def handle_medusa_api_error(e: requests.exceptions.HTTPError, entity_name: str, entity_identifier: str):
+    resp = getattr(e, "response", None)
+    
+    if _is_duplicate_http(resp):
+        reason = "Already exists in Medusa (Duplicate)"
+        print(f"   ℹ️  [SKIP] {entity_name} '{entity_identifier}': {reason}")
+        return ('ignore', reason)
+    
+    if resp is not None and resp.status_code in (400, 422):
+        detail = _resp_json_or_text(resp)
+        reason = json.dumps(detail, ensure_ascii=False) if isinstance(detail, (dict, list)) else str(detail)
+        print(f"   ❌ [FAIL] {entity_name} '{entity_identifier}': HTTP {resp.status_code}")
+        print(f"      - Reason: {reason}")
+        return ('fail', reason)
+    
+    reason = f"HTTP Error {resp.status_code if resp else 'unknown'}: {str(e)}"
+    print(f"   ❌ [FAIL] {entity_name} '{entity_identifier}': {reason}")
+    return ('fail', reason)

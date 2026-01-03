@@ -9,7 +9,6 @@ def _slugify(text: str) -> str:
     text = unicodedata.normalize("NFKD", text)
     text = "".join([c for c in text if not unicodedata.combining(c)])
     text = text.lower().strip()
-    # tiếng Việt: "đ" không phải ký tự dấu-combining nên cần map thủ công
     text = text.replace("đ", "d")
     text = re.sub(r"[^a-z0-9]+", "-", text)
     text = re.sub(r"-{2,}", "-", text).strip("-")
