@@ -16,4 +16,5 @@ services:
       - "magento.test:host-gateway"
     environment:
       - PYTHONUNBUFFERED=1
+      - TZ=Asia/Ho_Chi_Minh
     restart: unless-stopped

@@ -1,10 +1,11 @@
 import json
 import requests
-from datetime import datetime
+from datetime import datetime, timedelta
 from connectors.medusa_connector import MedusaConnector
 
 def get_timestamp():
-    return datetime.now().strftime("%H:%M:%S")
+    # Force UTC+7 (Vietnam Time)
+    return (datetime.utcnow() + timedelta(hours=7)).strftime("%H:%M:%S")
 
 def log_info(msg, indent=0):
     print(f"[{get_timestamp()}] [INFO] {msg}")
