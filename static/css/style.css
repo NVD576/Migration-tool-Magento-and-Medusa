@@ -1,0 +1,85 @@
+body {
+    background-color: #212529;
+    color: #e9ecef;
+}
+
+.card {
+    background-color: #2b3035;
+    border-color: #495057;
+}
+
+.card-header {
+    background-color: #343a40;
+    border-bottom-color: #495057;
+}
+
+.form-control,
+.form-control:focus {
+    background-color: #212529;
+    border-color: #495057;
+    color: #e9ecef;
+}
+
+.form-control::placeholder {
+    color: #6c757d;
+}
+
+.input-group-text {
+    background-color: #343a40;
+    border-color: #495057;
+    color: #e9ecef;
+}
+
+/* Scrollbar styling */
+::-webkit-scrollbar {
+    width: 8px;
+    height: 8px;
+}
+
+::-webkit-scrollbar-track {
+    background: #2b3035;
+}
+
+::-webkit-scrollbar-thumb {
+    background: #495057;
+    border-radius: 4px;
+}
+
+::-webkit-scrollbar-thumb:hover {
+    background: #6c757d;
+}
+
+/* Log colors */
+.log-line {
+    margin-bottom: 2px;
+    line-height: 1.4;
+    white-space: pre-wrap;
+    word-break: break-word;
+    padding-left: 22px;
+    text-indent: -22px;
+}
+
+.log-error {
+    color: #ff6b6b;
+}
+
+.log-warning {
+    color: #fcc419;
+}
+
+.log-success {
+    color: #51cf66;
+}
+
+.log-info {
+    color: #74c0fc;
+}
+
+.log-dim {
+    color: #868e96;
+}
+
+#log-container {
+    font-family: 'Consolas', 'Monaco', monospace;
+    font-size: 0.85rem;
+}

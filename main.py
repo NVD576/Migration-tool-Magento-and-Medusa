@@ -144,9 +144,9 @@ def main():
 
     stages = []
     if not magento_token or not medusa_token:
-        stages.append("🔐 LOGIN & AUTHENTICATION")
-    stages.append("🔌 CONFIGURATION & READINESS")
-    stages.append("🚀 MIGRATION WORKFLOW STARTING")
+        stages.append("LOGIN & AUTHENTICATION")
+    stages.append("CONFIGURATION & READINESS")
+    stages.append("MIGRATION WORKFLOW STARTING")
 
     total_stages = len(stages)
     current_stage = 0
@@ -157,7 +157,7 @@ def main():
 
     try:
         if not magento_token:
-            print_stage("🔐 LOGIN & AUTHENTICATION")
+            print_stage("LOGIN & AUTHENTICATION")
             magento_token = get_magento_token(
                 magento_cfg["BASE_URL"],
                 magento_cfg["ADMIN_USERNAME"],
@@ -166,28 +166,28 @@ def main():
             )
         else:
             if not args.skip_init_log:
-                print(f"✅ [SESSION] Magento: Session authenticated.")
+                print(f"[SESSION] Magento: Session authenticated.")
 
         magento = MagentoConnector(base_url=magento_cfg["BASE_URL"], token=magento_token, verify_ssl=magento_cfg["VERIFY_SSL"])
 
         if not medusa_token:
             if current_stage == 0:
-                 print_stage("🔐 LOGIN & AUTHENTICATION")
+                 print_stage("LOGIN & AUTHENTICATION")
             medusa_token = get_medusa_token(
                 medusa_cfg["BASE_URL"], medusa_cfg["EMAIL"], medusa_cfg["PASSWORD"]
             )
         else:
             if not args.skip_init_log:
-                print(f"✅ [SESSION] Medusa: Session authenticated.")
+                print(f"[SESSION] Medusa: Session authenticated.")
 
         medusa = MedusaConnector(base_url=medusa_cfg["BASE_URL"], api_token=medusa_token)
         
     except Exception:
         return
 
-    print_stage("🔌 CONFIGURATION & READINESS")
+    print_stage("CONFIGURATION & READINESS")
     if not args.skip_init_log:
-        print("✅ Magento & Medusa connections initialized.")
+        print("Magento & Medusa connections initialized.")
 
     mg_to_medusa_map = {}
 
@@ -205,7 +205,7 @@ def main():
 
 
 
-    print("\n✅ Migration completed!")
+    print("\nMigration completed!")
 
 if __name__ == "__main__":
     main()

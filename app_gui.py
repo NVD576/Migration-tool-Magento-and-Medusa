@@ -173,7 +173,7 @@ class MigrationGUI(tk.Tk):
     
     def _setup_logging(self):
         def warning_handler(message, category, filename, lineno, file=None, line=None):
-            warning_msg = f"⚠️ Warning: {category.__name__}: {message}\n"
+            warning_msg = f"Warning: {category.__name__}: {message}\n"
             self._log(warning_msg)
         
         warnings.showwarning = warning_handler
@@ -362,9 +362,9 @@ MEDUSA = {{
         try:
             with open("config.py", "w", encoding="utf-8") as f:
                 f.write(content)
-            self._log("💾 Configuration saved into config.py\n")
+            self._log("Configuration saved into config.py\n")
         except Exception as e:
-            self._log(f"⚠ Could not save config.py: {e}\n")
+            self._log(f"Could not save config.py: {e}\n")
 
     def _get_entities(self):
         entities = []
@@ -412,7 +412,7 @@ MEDUSA = {{
                 token = get_magento_token(base_url, user, pwd, verify, logger=self._log)
                 self.cached_magento_token = token
             except Exception as e:
-                error_msg = f"❌ Lỗi Login Magento: {str(e)}\n"
+                error_msg = f"Lỗi Login Magento: {str(e)}\n"
                 self._log(error_msg)
                 messagebox.showerror("Lỗi Login Magento", str(e))
                 return None
@@ -478,7 +478,7 @@ MEDUSA = {{
                 loading.destroy()
                 
                 if isinstance(res, Exception):
-                    error_msg = f"❌ Failed to fetch products: {res}\n"
+                    error_msg = f"Failed to fetch products: {res}\n"
                     self._log(error_msg)
                 else:
                     self.cached_products = res
@@ -548,7 +548,7 @@ MEDUSA = {{
                 loading.destroy()
                 
                 if isinstance(res, Exception):
-                    error_msg = f"❌ Failed to fetch categories: {res}\n"
+                    error_msg = f"Failed to fetch categories: {res}\n"
                     self._log(error_msg)
                 else:
                     self.cached_categories = res
@@ -620,7 +620,7 @@ MEDUSA = {{
                 loading.destroy()
                 
                 if isinstance(res, Exception):
-                    error_msg = f"❌ Failed to fetch customers: {res}\n"
+                    error_msg = f"Failed to fetch customers: {res}\n"
                     self._log(error_msg)
                 else:
                     self.cached_customers = res
@@ -691,7 +691,7 @@ MEDUSA = {{
                 loading.destroy()
                 
                 if isinstance(res, Exception):
-                    error_msg = f"❌ Failed to fetch orders: {res}\n"
+                    error_msg = f"Failed to fetch orders: {res}\n"
                     self._log(error_msg)
                 else:
                     self.cached_orders = res
@@ -743,13 +743,13 @@ MEDUSA = {{
 
                 if isinstance(res, Exception):
                     self.cached_magento_token = None
-                    error_msg = f"❌ Magento Login failed: {res}\n"
+                    error_msg = f"Magento Login failed: {res}\n"
                     self._log(error_msg)
                     messagebox.showerror("Magento", f"Login failed.\nError: {res}")
                 else:
                     self.cached_magento_token = res
                     self.init_done = False
-                    self._log("✅ Magento Login OK! Token cached for this session.\n")
+                    self._log("Magento Login OK! Token cached for this session.\n")
                     messagebox.showinfo("Magento", "Login OK!\nToken cached for this session.")
             
             except queue.Empty:
@@ -793,7 +793,7 @@ MEDUSA = {{
 
                 if isinstance(res, Exception):
                     self.cached_medusa_token = None
-                    error_msg = f"❌ Medusa Login failed: {res}\n"
+                    error_msg = f"Medusa Login failed: {res}\n"
                     self._log(error_msg)
                     messagebox.showerror("Medusa", f"Login failed.\nError: {res}")
                 else:

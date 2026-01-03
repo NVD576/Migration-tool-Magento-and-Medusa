@@ -7,42 +7,37 @@ def get_timestamp():
     return datetime.now().strftime("%H:%M:%S")
 
 def log_info(msg, indent=0):
-    prefix = "   " * indent
-    print(f"[{get_timestamp()}] {prefix}ℹ️  {msg}")
+    print(f"[{get_timestamp()}] [INFO] {msg}")
 
 def log_success(msg, indent=0):
-    prefix = "   " * indent
-    print(f"[{get_timestamp()}] {prefix}✅ {msg}")
+    print(f"[{get_timestamp()}] [SUCCESS] {msg}")
 
 def log_warning(msg, indent=0):
-    prefix = "   " * indent
-    print(f"[{get_timestamp()}] {prefix}⚠️  {msg}")
+    print(f"[{get_timestamp()}] [WARNING] {msg}")
 
 def log_error(msg, indent=0):
-    prefix = "   " * indent
-    print(f"[{get_timestamp()}] {prefix}❌ {msg}")
+    print(f"[{get_timestamp()}] [ERROR] {msg}")
 
 def log_step(step_num, total_steps, msg, indent=0):
-    prefix = "   " * indent
-    print(f"[{get_timestamp()}] {prefix}[STEP {step_num}/{total_steps}] {msg}")
+    print(f"[{get_timestamp()}] [STEP {step_num}/{total_steps}] {msg}")
 
 def log_progress(current, total, entity_type):
     pct = (current / total * 100) if total > 0 else 0
     bar_len = 20
     filled = int(bar_len * current / total) if total > 0 else 0
-    bar = "█" * filled + "░" * (bar_len - filled)
-    print(f"[{get_timestamp()}] 📊 Progress: [{bar}] {current}/{total} ({pct:.0f}%) {entity_type}")
+    bar = "=" * filled + "-" * (bar_len - filled)
+    print(f"[{get_timestamp()}] [PROGRESS] [{bar}] {current}/{total} ({pct:.0f}%) {entity_type}")
 
 def log_section(title):
-    print(f"\n[{get_timestamp()}] {'='*50}")
-    print(f"[{get_timestamp()}] 📦 {title}")
+    print(f"[{get_timestamp()}] {'='*50}")
+    print(f"[{get_timestamp()}] {title}")
     print(f"[{get_timestamp()}] {'='*50}")
 
 def log_summary(entity_type, success, ignored, failed):
-    print(f"\n[{get_timestamp()}] --- {entity_type} Migration Summary ---")
-    print(f"[{get_timestamp()}] ✅ Success: {success}")
-    print(f"[{get_timestamp()}] ℹ️  Ignored: {ignored}")
-    print(f"[{get_timestamp()}] ❌ Failed:  {failed}")
+    print(f"[{get_timestamp()}] --- {entity_type} Migration Summary ---")
+    print(f"[{get_timestamp()}] Success: {success}")
+    print(f"[{get_timestamp()}] Ignored: {ignored}")
+    print(f"[{get_timestamp()}] Failed:  {failed}")
     print(f"[{get_timestamp()}] {'-'*35}")
 
 def _limit_iter(items, limit: int):
@@ -147,16 +142,16 @@ def handle_medusa_api_error(e: requests.exceptions.HTTPError, entity_name: str, 
     
     if _is_duplicate_http(resp):
         reason = "Already exists in Medusa (Duplicate)"
-        print(f"   ℹ️  [SKIP] {entity_name} '{entity_identifier}': {reason}")
+        print(f"[{get_timestamp()}] [SKIP] {entity_name} '{entity_identifier}': {reason}")
         return ('ignore', reason)
     
     if resp is not None and resp.status_code in (400, 422):
         detail = _resp_json_or_text(resp)
         reason = json.dumps(detail, ensure_ascii=False) if isinstance(detail, (dict, list)) else str(detail)
-        print(f"   ❌ [FAIL] {entity_name} '{entity_identifier}': HTTP {resp.status_code}")
-        print(f"      - Reason: {reason}")
+        print(f"[{get_timestamp()}] [FAIL] {entity_name} '{entity_identifier}': HTTP {resp.status_code}")
+        print(f"[{get_timestamp()}] - Reason: {reason}")
         return ('fail', reason)
     
     reason = f"HTTP Error {resp.status_code if resp else 'unknown'}: {str(e)}"
-    print(f"   ❌ [FAIL] {entity_name} '{entity_identifier}': {reason}")
+    print(f"[{get_timestamp()}] [FAIL] {entity_name} '{entity_identifier}': {reason}")
     return ('fail', reason)

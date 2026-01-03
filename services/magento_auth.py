@@ -14,7 +14,7 @@ def get_magento_token(base_url, username, password, verify_ssl=False, logger=pri
                 "password": password
             },
             verify=verify_ssl,
-            timeout=15
+            timeout=60
         )
         response.raise_for_status()
         token = response.json()

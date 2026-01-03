@@ -1,0 +1,19 @@
+version: '3.8'
+
+services:
+  migration-tool:
+    build: .
+    image: migration-tool:latest
+    container_name: migration-tool
+    ports:
+      - "5000:5000"
+    volumes:
+      - ./exports:/app/exports
+      # Uncomment to mount code for development (hot reload requires extra setup)
+      - .:/app
+    extra_hosts:
+      - "host.docker.internal:host-gateway"
+      - "magento.test:host-gateway"
+    environment:
+      - PYTHONUNBUFFERED=1
+    restart: unless-stopped

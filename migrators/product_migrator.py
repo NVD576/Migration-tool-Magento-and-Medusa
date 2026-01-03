@@ -24,7 +24,7 @@ def _fetch_all_magento_categories(magento: MagentoConnector, args):
 def _sync_single_product(product, magento: MagentoConnector, medusa: MedusaConnector, args, mg_to_medusa_map, mg_category_map, sales_channel_id, shipping_profile_id):
     product_name = product.get('name', 'N/A')
     product_sku = product.get('sku', 'N/A')
-    print(f"[{get_timestamp()}] ➡ Syncing: {product_name} (SKU: {product_sku})")
+    print(f"[{get_timestamp()}] Syncing: {product_name} (SKU: {product_sku})")
 
     product_categories = []
     links = (product.get("extension_attributes") or {}).get("category_links") or []
@@ -68,7 +68,7 @@ def _sync_single_product(product, magento: MagentoConnector, medusa: MedusaConne
 
 def migrate_products(magento: MagentoConnector, medusa: MedusaConnector, args, mg_to_medusa_map=None):
     log_section("PRODUCT MIGRATION PHASE")
-    print(f"[{get_timestamp()}] 📥 Fetching products from Magento...")
+    print(f"[{get_timestamp()}] Fetching products from Magento...")
     
     p_ids = None
     if getattr(args, "product_ids", None):
@@ -78,7 +78,7 @@ def migrate_products(magento: MagentoConnector, medusa: MedusaConnector, args, m
     products = extract_products(magento, ids=p_ids)
     products = _limit_iter(products, args.limit)
     product_count = len(products)
-    print(f"[{get_timestamp()}] 🚀 Found {product_count} products to migrate...\n")
+    print(f"[{get_timestamp()}] Found {product_count} products to migrate...\n")
 
     mg_to_medusa = mg_to_medusa_map if mg_to_medusa_map is not None else {}
     mg_category_map = None
@@ -87,7 +87,7 @@ def migrate_products(magento: MagentoConnector, medusa: MedusaConnector, args, m
     shipping_profile_id = None
     
     try:
-        print(f"[{get_timestamp()}] 🔧 Fetching sales channels from Medusa...")
+        print(f"[{get_timestamp()}] Fetching sales channels from Medusa...")
         sc_response = medusa.get_sales_channels()
         sales_channels = sc_response.get("sales_channels", [])
         if sales_channels:
@@ -99,7 +99,7 @@ def migrate_products(magento: MagentoConnector, medusa: MedusaConnector, args, m
         log_warning(f"Failed to fetch sales channels: {e}. Using default.", indent=1)
     
     try:
-        print(f"[{get_timestamp()}] 🔧 Fetching shipping profiles from Medusa...")
+        print(f"[{get_timestamp()}] Fetching shipping profiles from Medusa...")
         sp_response = medusa.get_shipping_profiles()
         shipping_profiles = sp_response.get("shipping_profiles", [])
         if shipping_profiles:
@@ -130,7 +130,7 @@ def migrate_products(magento: MagentoConnector, medusa: MedusaConnector, args, m
     count_ignore = 0
     count_fail = 0
 
-    print(f"[{get_timestamp()}] ⚙️ Starting transformation & sync process...")
+    print(f"[{get_timestamp()}] Starting transformation & sync process...")
     
     with ThreadPoolExecutor(max_workers=args.max_workers or 10) as executor:
         futures = {
