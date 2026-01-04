@@ -6,7 +6,9 @@ document.addEventListener('DOMContentLoaded', () => {
     // UI Elements
     const btnStart = document.getElementById('btn-start');
     const btnStop = document.getElementById('btn-stop');
+    const btnPause = document.getElementById('btn-pause');
     const statusIndicator = document.getElementById('status-indicator');
+    let isPaused = false;
 
     // Forms
     const magentoForm = document.getElementById('magento-form');
@@ -23,7 +25,8 @@ document.addEventListener('DOMContentLoaded', () => {
 
     socket.on('status_update', (data) => {
         isRunning = data.running;
-        updateUIState(isRunning);
+        isPaused = data.paused || false;
+        updateUIState(isRunning, isPaused);
         if (data.message) logSystem(data.message, 'success');
         if (data.error) logSystem(data.error, 'error');
     });
@@ -143,7 +146,7 @@ document.addEventListener('DOMContentLoaded', () => {
             });
             const result = await res.json();
             if (result.success) {
-                updateUIState(true);
+                updateUIState(true, false);
             } else {
                 alert(result.error);
                 btnStart.disabled = false;
@@ -160,19 +163,44 @@ document.addEventListener('DOMContentLoaded', () => {
         logSystem("Stop command sent...", 'warning');
     });
 
-    function updateUIState(running) {
+    btnPause.addEventListener('click', async () => {
+        if (!isRunning) return;
+
+        const url = isPaused ? '/api/resume' : '/api/pause';
+        try {
+            const res = await fetch(url, { method: 'POST' });
+            const result = await res.json();
+            if (result.success) {
+                isPaused = result.paused;
+                updateUIState(isRunning, isPaused);
+            } else {
+                alert(result.error);
+            }
+        } catch (e) {
+            alert(e.message);
+        }
+    });
+
+    function updateUIState(running, paused) {
         isRunning = running;
+        isPaused = paused;
+
         if (running) {
-            statusIndicator.textContent = 'Running';
-            statusIndicator.className = 'badge bg-success animate-pulse';
+            statusIndicator.textContent = paused ? 'Paused' : 'Running';
+            statusIndicator.className = paused ? 'badge bg-warning' : 'badge bg-success animate-pulse';
+
             btnStart.classList.add('d-none');
             btnStop.classList.remove('d-none');
-            // Disable inputs? Maybe later
+            btnPause.classList.remove('d-none');
+
+            btnPause.innerHTML = paused ? '<i class="bi bi-play-fill"></i> Resume' : '<i class="bi bi-pause-fill"></i> Pause';
+            btnPause.className = paused ? 'btn btn-success' : 'btn btn-warning';
         } else {
             statusIndicator.textContent = 'Idle';
             statusIndicator.className = 'badge bg-secondary';
             btnStart.classList.remove('d-none');
             btnStop.classList.add('d-none');
+            btnPause.classList.add('d-none');
             btnStart.disabled = false;
         }
     }
@@ -204,7 +232,12 @@ document.addEventListener('DOMContentLoaded', () => {
             migrate_payments: document.getElementById('opt_migrate_payments').checked,
             rollback_on_finalize_fail: document.getElementById('opt_rollback_finalize').checked,
             delta_migration: document.getElementById('opt_delta_migration').checked,
-            delta_from_date: document.getElementById('opt_delta_from_date').value || null,
+            delta_from_date: (() => {
+                const val = document.getElementById('opt_delta_from_date').value;
+                if (!val) return null;
+                // datetime-local is YYYY-MM-DDTHH:mm -> convert to YYYY-MM-DD HH:mm:ss
+                return val.replace('T', ' ') + ':00';
+            })(),
             max_workers: 10
         };
     }

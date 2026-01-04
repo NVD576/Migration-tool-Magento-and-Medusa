@@ -49,6 +49,7 @@ socketio = SocketIO(app, async_mode='eventlet', cors_allowed_origins="*")
 migration_state = {
     'running': False,
     'stop_requested': False,
+    'paused': False,
     'magento_token': None,
     'medusa_token': None,
     'cached_products': None,
@@ -258,16 +259,17 @@ def run_migration_task(config_data):
             migrate_orders(magento, medusa, args, migration_state)
 
         print("Migration process finished.")
-        socketio.emit('status_update', {'running': False, 'message': 'Completed'})
+        socketio.emit('status_update', {'running': False, 'paused': False, 'message': 'Completed'})
 
     except Exception as e:
         print(f"Migration failed: {e}")
         import traceback
         traceback.print_exc(file=sys.stdout)
-        socketio.emit('status_update', {'running': False, 'error': str(e)})
+        socketio.emit('status_update', {'running': False, 'paused': False, 'error': str(e)})
     finally:
         migration_state['running'] = False
         migration_state['stop_requested'] = False
+        migration_state['paused'] = False
         toggle_pause_signal(active=False) # Ensure pause is cleared
         sys.stdout = original_stdout
 
@@ -291,12 +293,13 @@ def start_migration():
     thread.daemon = True
     thread.start()
 
-    return jsonify({'success': True})
+    return jsonify({'success': True, 'running': True, 'paused': False})
 
 @app.route('/api/stop', methods=['POST'])
 def stop_migration():
     if migration_state['running']:
         migration_state['stop_requested'] = True
+        migration_state['paused'] = False
         toggle_pause_signal(active=False) 
         # Mirror with file signal for migrators
         try:
@@ -305,21 +308,26 @@ def stop_migration():
         except Exception as e:
             print(f"Error creating stop signal file: {e}")
             
-        return jsonify({'success': True, 'message': 'Stop requested...'})
+        socketio.emit('status_update', {'running': True, 'paused': False, 'message': 'Stopping...'})
+        return jsonify({'success': True, 'paused': False, 'message': 'Stop requested...'})
     return jsonify({'success': False, 'error': 'Not running'})
 
 @app.route('/api/pause', methods=['POST'])
 def pause_migration():
     if migration_state['running']:
+        migration_state['paused'] = True
         toggle_pause_signal(active=True)
-        return jsonify({'success': True, 'message': 'Pause requested...'})
+        socketio.emit('status_update', {'running': True, 'paused': True})
+        return jsonify({'success': True, 'paused': True, 'message': 'Pause requested...'})
     return jsonify({'success': False, 'error': 'Not running'})
 
 @app.route('/api/resume', methods=['POST'])
 def resume_migration():
     if migration_state['running']:
+        migration_state['paused'] = False
         toggle_pause_signal(active=False)
-        return jsonify({'success': True, 'message': 'Resume requested...'})
+        socketio.emit('status_update', {'running': True, 'paused': False})
+        return jsonify({'success': True, 'paused': False, 'message': 'Resume requested...'})
     return jsonify({'success': False, 'error': 'Not running'})
 
 if __name__ == '__main__':

@@ -3,8 +3,10 @@ import os
 import subprocess
 import threading
 import queue
+import time
+import datetime
 import tkinter as tk
-from tkinter import messagebox
+from tkinter import messagebox, ttk
 from tkinter.scrolledtext import ScrolledText
 import requests
 import urllib3
@@ -21,7 +23,7 @@ except Exception:
 
 from services.magento_auth import get_magento_token
 from services.medusa_auth import get_medusa_token
-from migrators.utils import clean_stop_signal
+from migrators.utils import clean_stop_signal, toggle_pause_signal
 
 
 
@@ -148,6 +150,87 @@ class SelectionDialog(tk.Toplevel):
         self._on_close()
 
 
+class DateSelectionDialog(tk.Toplevel):
+    def __init__(self, parent, initial_date=""):
+        super().__init__(parent)
+        self.title("Select Date & Time")
+        self.geometry("300x250")
+        self.resizable(False, False)
+        self.result = None
+        
+        now = datetime.datetime.now()
+        y, m, d = now.year, now.month, now.day
+        hh, mm, ss = 0, 0, 0
+        
+        if initial_date:
+            try:
+                dt = datetime.datetime.strptime(initial_date, "%Y-%m-%d %H:%M:%S")
+                y, m, d = dt.year, dt.month, dt.day
+                hh, mm, ss = dt.hour, dt.minute, dt.second
+            except:
+                pass
+        
+        tk.Label(self, text="Date (YYYY-MM-DD)").pack(pady=(10, 0))
+        date_frame = tk.Frame(self)
+        date_frame.pack(pady=5)
+        
+        self.spin_y = tk.Spinbox(date_frame, from_=2000, to=2100, width=5)
+        self.spin_y.delete(0, "end")
+        self.spin_y.insert(0, str(y))
+        self.spin_y.pack(side="left", padx=2)
+        
+        self.spin_m = tk.Spinbox(date_frame, from_=1, to=12, width=3)
+        self.spin_m.delete(0, "end")
+        self.spin_m.insert(0, str(m))
+        self.spin_m.pack(side="left", padx=2)
+        
+        self.spin_d = tk.Spinbox(date_frame, from_=1, to=31, width=3)
+        self.spin_d.delete(0, "end")
+        self.spin_d.insert(0, str(d))
+        self.spin_d.pack(side="left", padx=2)
+        
+        tk.Label(self, text="Time (HH:mm:ss)").pack(pady=(10, 0))
+        time_frame = tk.Frame(self)
+        time_frame.pack(pady=5)
+        
+        self.spin_hh = tk.Spinbox(time_frame, from_=0, to=23, width=3)
+        self.spin_hh.delete(0, "end")
+        self.spin_hh.insert(0, str(hh))
+        self.spin_hh.pack(side="left", padx=2)
+        
+        self.spin_mm = tk.Spinbox(time_frame, from_=0, to=59, width=3)
+        self.spin_mm.delete(0, "end")
+        self.spin_mm.insert(0, str(mm))
+        self.spin_mm.pack(side="left", padx=2)
+        
+        self.spin_ss = tk.Spinbox(time_frame, from_=0, to=59, width=3)
+        self.spin_ss.delete(0, "end")
+        self.spin_ss.insert(0, str(ss))
+        self.spin_ss.pack(side="left", padx=2)
+        
+        btn_frame = tk.Frame(self)
+        btn_frame.pack(pady=20)
+        tk.Button(btn_frame, text="Apply", command=self._on_apply, width=10).pack(side="left", padx=10)
+        tk.Button(btn_frame, text="Cancel", command=self.destroy, width=10).pack(side="left", padx=10)
+        
+        self.transient(parent)
+        self.grab_set()
+
+    def _on_apply(self):
+        try:
+            y = int(self.spin_y.get())
+            m = int(self.spin_m.get())
+            d = int(self.spin_d.get())
+            hh = int(self.spin_hh.get())
+            mm = int(self.spin_mm.get())
+            ss = int(self.spin_ss.get())
+            
+            dt = datetime.datetime(y, m, d, hh, mm, ss)
+            self.result = dt.strftime("%Y-%m-%d %H:%M:%S")
+            self.destroy()
+        except ValueError as e:
+            messagebox.showerror("Invalid Date", "Please enter a valid date and time.")
+
 class MigrationGUI(tk.Tk):
     def __init__(self):
         super().__init__()
@@ -242,9 +325,19 @@ class MigrationGUI(tk.Tk):
         self.cb_dry_run_file.pack(side="left", padx=(10, 0))
 
         self.var_finalize_orders = tk.BooleanVar(value=True)
-        tk.Checkbutton(opts_box, text="Finalize orders (Draft -> Order)", variable=self.var_finalize_orders).grid(row=2, column=0, columnspan=2, sticky="w", padx=10, pady=(0, 10))
+        tk.Checkbutton(opts_box, text="Finalize orders (Draft -> Order)", variable=self.var_finalize_orders).grid(row=2, column=0, columnspan=2, sticky="w", padx=10, pady=(0, 5))
 
-        tk.Checkbutton(opts_box, text="Finalize orders (Draft -> Order)", variable=self.var_finalize_orders).grid(row=2, column=0, columnspan=2, sticky="w", padx=10, pady=(0, 10))
+        # Delta Migration Section
+        delta_frame = tk.LabelFrame(opts_box, text="Delta Migration")
+        delta_frame.grid(row=3, column=0, columnspan=2, sticky="we", padx=10, pady=(0, 10))
+        
+        self.var_delta_migration = tk.BooleanVar(value=False)
+        tk.Checkbutton(delta_frame, text="Enable Delta (Orders only)", variable=self.var_delta_migration).grid(row=0, column=0, columnspan=2, sticky="w", padx=5)
+        
+        tk.Label(delta_frame, text="From:").grid(row=1, column=0, sticky="w", padx=5)
+        self.var_delta_from_date = tk.StringVar()
+        tk.Entry(delta_frame, textvariable=self.var_delta_from_date, width=18).grid(row=1, column=1, sticky="w")
+        tk.Button(delta_frame, text="📅", width=2, command=self._open_date_picker).grid(row=1, column=2, padx=2)
         cfg_container = tk.Frame(self)
         cfg_container.pack(fill="x", padx=12, pady=(0, 6))
         
@@ -252,7 +345,6 @@ class MigrationGUI(tk.Tk):
         cfg_toggle_btn = tk.Button(cfg_container, text="▼ Show Configuration", command=self._toggle_config)
         cfg_toggle_btn.pack(anchor="w")
         
-        self.cfg_frame = tk.Frame(cfg_container)
         self.cfg_frame = tk.Frame(cfg_container)
         
         cfg = self.cfg_frame
@@ -305,13 +397,14 @@ class MigrationGUI(tk.Tk):
         self.btn_stop.pack(side="left", padx=(10, 0))
         
         # Pause/Resume Button
-        self.pause_btn = ttk.Button(
-            actions, # Corrected parent frame to 'actions'
+        self.pause_btn = tk.Button(
+            actions,
             text="Pause",
+            width=14,
             command=self._pause_resume,
             state=tk.DISABLED
         )
-        self.pause_btn.pack(side="left", padx=(10, 0)) # Adjusted padx for consistency
+        self.pause_btn.pack(side="left", padx=(10, 0))
         
         tk.Button(actions, text="Clear log", width=14, command=self._clear_log).pack(side="left", padx=(10, 0))
 
@@ -573,6 +666,13 @@ MEDUSA = {{
                 self.after(100, check_result)
 
         check_result()
+    
+    def _open_date_picker(self):
+        initial = self.var_delta_from_date.get()
+        dlg = DateSelectionDialog(self, initial_date=initial)
+        self.wait_window(dlg)
+        if dlg.result:
+            self.var_delta_from_date.set(dlg.result)
 
     def _open_customer_selector(self):
         if self.cached_customers:
@@ -840,7 +940,7 @@ MEDUSA = {{
         # Disable run button immediately
         self.btn_run.config(state="disabled")
         self.btn_stop.config(state="normal")
-        self.pause_btn.config(state="normal", text="Pause") # Enable pause button and set text to "Pause"
+        self.pause_btn.config(state="normal", text="Pause")
         
         # Ensure clean state
         clean_stop_signal()
@@ -864,6 +964,12 @@ MEDUSA = {{
                 cmd += ["--dry-run-file"]
             if self.var_finalize_orders.get():
                 cmd += ["--finalize-orders"]
+            
+            if self.var_delta_migration.get():
+                cmd += ["--delta-migration"]
+                from_date = self.var_delta_from_date.get().strip()
+                if from_date:
+                    cmd += ["--delta-from-date", from_date]
                 
             self._save_to_config_py()
 

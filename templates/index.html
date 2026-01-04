@@ -174,7 +174,7 @@
                         <!-- Order Migration Options -->
                         <div class="border-top pt-3 mb-3">
                             <label class="form-label small mb-2 fw-bold">Order Migration Options</label>
-                            
+
                             <div class="form-check mb-2">
                                 <input class="form-check-input" type="checkbox" id="opt_migrate_invoices">
                                 <label class="form-check-label small" for="opt_migrate_invoices">
@@ -200,7 +200,7 @@
                         <!-- Delta Migration -->
                         <div class="border-top pt-3 mb-3">
                             <label class="form-label small mb-2 fw-bold">Delta Migration</label>
-                            
+
                             <div class="form-check mb-2">
                                 <input class="form-check-input" type="checkbox" id="opt_delta_migration">
                                 <label class="form-check-label small" for="opt_delta_migration">
@@ -210,9 +210,8 @@
 
                             <div class="input-group input-group-sm">
                                 <span class="input-group-text">From Date</span>
-                                <input type="text" class="form-control" id="opt_delta_from_date" 
-                                    placeholder="YYYY-MM-DD HH:mm:ss" 
-                                    title="Format: YYYY-MM-DD HH:mm:ss (e.g., 2024-01-01 00:00:00)">
+                                <input type="datetime-local" class="form-control" id="opt_delta_from_date"
+                                    title="Select date and time for delta migration">
                             </div>
                             <small class="text-muted">Only migrate orders updated after this date</small>
                         </div>
@@ -220,6 +219,9 @@
                         <div class="d-grid gap-2">
                             <button class="btn btn-primary" id="btn-start">
                                 <i class="bi bi-play-fill"></i> Start Migration
+                            </button>
+                            <button class="btn btn-warning d-none" id="btn-pause">
+                                <i class="bi bi-pause-fill"></i> Pause
                             </button>
                             <button class="btn btn-danger d-none" id="btn-stop">
                                 <i class="bi bi-stop-fill"></i> Stop
