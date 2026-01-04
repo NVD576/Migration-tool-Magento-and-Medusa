@@ -16,6 +16,64 @@ def log_success(msg, indent=0):
 def log_warning(msg, indent=0):
     print(f"[{get_timestamp()}] [WARNING] {msg}")
 
+STOP_SIGNAL_FILE = ".stop_signal"
+PAUSE_SIGNAL_FILE = ".pause_signal"
+
+def check_stop_signal():
+    """Returns True if the stop signal file exists."""
+    import os
+    if os.path.exists(STOP_SIGNAL_FILE):
+        return True
+    return False
+
+def clean_stop_signal():
+    """Removes the stop signal file if it exists."""
+    import os
+    try:
+        if os.path.exists(STOP_SIGNAL_FILE):
+            os.remove(STOP_SIGNAL_FILE)
+    except Exception:
+        pass
+
+def toggle_pause_signal(active: bool):
+    """Creates or removes the pause signal file."""
+    import os
+    try:
+        if active:
+            with open(PAUSE_SIGNAL_FILE, "w") as f:
+                f.write("pause")
+        else:
+            if os.path.exists(PAUSE_SIGNAL_FILE):
+                os.remove(PAUSE_SIGNAL_FILE)
+    except Exception:
+        pass
+
+def check_pause_signal():
+    """
+    Checks if pause signal exists. If yes, loops (blocks) until 
+    pause signal is removed or stop signal is detected.
+    Returns True if stopped while paused, False if resumed.
+    """
+    import os
+    import time
+    
+    paused_once = False
+    while os.path.exists(PAUSE_SIGNAL_FILE):
+        if not paused_once:
+            print(f"[{get_timestamp()}] [INFO] ⏸️ Process PAUSED. Waiting for resume...")
+            paused_once = True
+            
+        if check_stop_signal():
+            return True # Stop detected while paused
+            
+        time.sleep(1)
+        
+    if paused_once:
+        print(f"[{get_timestamp()}] [INFO] ▶️ Process RESUMED.")
+        
+    return False
+
+
 def log_error(msg, indent=0):
     print(f"[{get_timestamp()}] [ERROR] {msg}")
 

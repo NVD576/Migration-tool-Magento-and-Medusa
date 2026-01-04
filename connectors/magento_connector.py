@@ -40,7 +40,28 @@ class MagentoConnector(BaseConnector):
         endpoint = f"rest/V1/customers/search?searchCriteria[currentPage]={page}&searchCriteria[pageSize]={page_size}"
         return self._request("GET", endpoint)
 
-    def get_orders(self, page=1, page_size=50):
+    def get_orders(self, page=1, page_size=50, updated_at_from=None):
         endpoint = f"rest/V1/orders?searchCriteria[currentPage]={page}&searchCriteria[pageSize]={page_size}"
+        if updated_at_from:
+            # Delta migration: filter by updated_at
+            endpoint += f"&searchCriteria[filterGroups][0][filters][0][field]=updated_at" \
+                        f"&searchCriteria[filterGroups][0][filters][0][value]={updated_at_from}" \
+                        f"&searchCriteria[filterGroups][0][filters][0][condition_type]=gteq"
         return self._request("GET", endpoint)
+
+    def get_order_invoices(self, order_id):
+        """Lấy tất cả invoices của một order"""
+        endpoint = f"rest/V1/orders/{order_id}/invoices"
+        try:
+            return self._request("GET", endpoint)
+        except Exception:
+            return {"items": []}
+
+    def get_order_payments(self, order_id):
+        """Lấy tất cả payments của một order"""
+        endpoint = f"rest/V1/orders/{order_id}/payment"
+        try:
+            return self._request("GET", endpoint)
+        except Exception:
+            return {}
 

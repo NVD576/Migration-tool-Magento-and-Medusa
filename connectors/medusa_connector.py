@@ -88,6 +88,12 @@ class MedusaConnector(BaseConnector):
     def finalize_draft_order(self, draft_order_id):
         endpoint = f"admin/draft-orders/{draft_order_id}/convert-to-order"
         return self._request("POST", endpoint, json={})
+    
+    def delete_draft_order(self, draft_order_id):
+        """Delete a draft order"""
+        endpoint = f"admin/draft-orders/{draft_order_id}"
+        return self._request("DELETE", endpoint)
+    
     def create_customer_address(self, customer_id, address):
         endpoint = f"admin/customers/{customer_id}/addresses"
         return self._request("POST", endpoint, json=address)

@@ -137,19 +137,19 @@
 
                             <div class="input-group input-group-sm mb-1">
                                 <span class="input-group-text" style="width: 85px;">Products</span>
-                                <input type="text" class="form-control" id="ids_products">
+                                <input type="text" class="form-control" id="ids_products" placeholder="IDs">
                                 <button class="btn btn-outline-secondary btn-select" data-type="products"
                                     type="button">Select</button>
                             </div>
                             <div class="input-group input-group-sm mb-1">
                                 <span class="input-group-text" style="width: 85px;">Categories</span>
-                                <input type="text" class="form-control" id="ids_categories">
+                                <input type="text" class="form-control" id="ids_categories" placeholder="IDs">
                                 <button class="btn btn-outline-secondary btn-select" data-type="categories"
                                     type="button">Select</button>
                             </div>
                             <div class="input-group input-group-sm mb-1">
                                 <span class="input-group-text" style="width: 85px;">Customers</span>
-                                <input type="text" class="form-control" id="ids_customers">
+                                <input type="text" class="form-control" id="ids_customers" placeholder="IDs">
                                 <button class="btn btn-outline-secondary btn-select" data-type="customers"
                                     type="button">Select</button>
                             </div>
@@ -166,9 +166,55 @@
                             <label class="form-check-label small" for="opt_dry_run">Dry Run (No API Writes)</label>
                         </div>
 
-                        <div class="form-check mb-3">
+                        <div class="form-check mb-2">
                             <input class="form-check-input" type="checkbox" id="opt_finalize" checked>
                             <label class="form-check-label small" for="opt_finalize">Finalize Orders</label>
+                        </div>
+
+                        <!-- Order Migration Options -->
+                        <div class="border-top pt-3 mb-3">
+                            <label class="form-label small mb-2 fw-bold">Order Migration Options</label>
+                            
+                            <div class="form-check mb-2">
+                                <input class="form-check-input" type="checkbox" id="opt_migrate_invoices">
+                                <label class="form-check-label small" for="opt_migrate_invoices">
+                                    <i class="bi bi-receipt"></i> Migrate Invoices (metadata only)
+                                </label>
+                            </div>
+
+                            <div class="form-check mb-2">
+                                <input class="form-check-input" type="checkbox" id="opt_migrate_payments">
+                                <label class="form-check-label small" for="opt_migrate_payments">
+                                    <i class="bi bi-credit-card"></i> Migrate Payments (metadata only)
+                                </label>
+                            </div>
+
+                            <div class="form-check mb-2">
+                                <input class="form-check-input" type="checkbox" id="opt_rollback_finalize">
+                                <label class="form-check-label small" for="opt_rollback_finalize">
+                                    <i class="bi bi-arrow-counterclockwise"></i> Rollback on Finalize Fail
+                                </label>
+                            </div>
+                        </div>
+
+                        <!-- Delta Migration -->
+                        <div class="border-top pt-3 mb-3">
+                            <label class="form-label small mb-2 fw-bold">Delta Migration</label>
+                            
+                            <div class="form-check mb-2">
+                                <input class="form-check-input" type="checkbox" id="opt_delta_migration">
+                                <label class="form-check-label small" for="opt_delta_migration">
+                                    Enable Delta Migration
+                                </label>
+                            </div>
+
+                            <div class="input-group input-group-sm">
+                                <span class="input-group-text">From Date</span>
+                                <input type="text" class="form-control" id="opt_delta_from_date" 
+                                    placeholder="YYYY-MM-DD HH:mm:ss" 
+                                    title="Format: YYYY-MM-DD HH:mm:ss (e.g., 2024-01-01 00:00:00)">
+                            </div>
+                            <small class="text-muted">Only migrate orders updated after this date</small>
                         </div>
 
                         <div class="d-grid gap-2">

@@ -59,6 +59,19 @@ def _transform_address(mg_address: dict) -> dict:
 
 
 
+def calculate_checksum(items, tax_amount, shipping_amount):
+    """
+    Tính checksum: Sum(line_total) + tax + shipping
+    Returns: (calculated_total, is_valid)
+    """
+    line_total = sum(
+        (item.get("unit_price", 0) * item.get("quantity", 0))
+        for item in items
+    )
+    calculated_total = line_total + tax_amount + shipping_amount
+    return calculated_total, line_total
+
+
 def transform_order(mg_order: dict, region_id: str, sku_map: dict = None, shipping_option: dict = None) -> dict:
 
     if sku_map is None:
@@ -70,7 +83,7 @@ def transform_order(mg_order: dict, region_id: str, sku_map: dict = None, shippi
 
 
     items = []
-
+    line_total_sum = 0
 
     for it in mg_order.get("items", []) or []:
         if it.get("parent_item_id"):
@@ -84,6 +97,9 @@ def transform_order(mg_order: dict, region_id: str, sku_map: dict = None, shippi
         if quantity <= 0:
             continue
         
+        line_total = unit_price * quantity
+        line_total_sum += line_total
+        
         variant_id = sku_map.get(sku) if sku else None
 
         if variant_id:
@@ -94,6 +110,7 @@ def transform_order(mg_order: dict, region_id: str, sku_map: dict = None, shippi
                 "metadata": {
                     "magento_sku": sku,
                     "magento_item_id": it.get("item_id"),
+                    "magento_line_total": line_total,
                 },
             })
         else:
@@ -104,6 +121,7 @@ def transform_order(mg_order: dict, region_id: str, sku_map: dict = None, shippi
                 "metadata": {
                     "magento_sku": sku,
                     "magento_item_id": it.get("item_id"),
+                    "magento_line_total": line_total,
                 },
             })
 
@@ -120,15 +138,22 @@ def transform_order(mg_order: dict, region_id: str, sku_map: dict = None, shippi
         shipping_address = _transform_address(shipping.get("address") or {})
 
 
+    # Tính tax và shipping
+    tax_amount = _to_cents(mg_order.get("tax_amount") or mg_order.get("base_tax_amount") or 0)
+    shipping_amount = _to_cents(mg_order.get("shipping_amount") or mg_order.get("base_shipping_amount") or 0)
+    grand_total = _to_cents(mg_order.get("grand_total") or mg_order.get("base_grand_total") or 0)
+    
+    # Tính checksum
+    calculated_total, calculated_line_total = calculate_checksum(items, tax_amount, shipping_amount)
+    checksum_valid = abs(calculated_total - grand_total) <= 1  # Cho phép sai số 1 cent
+    
     shipping_methods = []
     if shipping_option:
-        shipping_amount = _to_cents(mg_order.get("shipping_amount") or 0)
         shipping_methods.append({
             "shipping_option_id": shipping_option.get("id"),
             "amount": shipping_amount,
             "name": shipping_option.get("name")
         })
-
 
     payload = {
         "email": email,
@@ -136,7 +161,7 @@ def transform_order(mg_order: dict, region_id: str, sku_map: dict = None, shippi
         "items": items,
         "billing_address": billing_address or None,
         "shipping_address": shipping_address or None,
-        "shipping_methods": shipping_methods,
+        "shipping_methods": shipping_methods if shipping_methods else None,
 
         "metadata": {
 
@@ -146,7 +171,12 @@ def transform_order(mg_order: dict, region_id: str, sku_map: dict = None, shippi
 
             "magento_status": mg_order.get("status"),
 
-            "magento_grand_total": mg_order.get("grand_total"),
+            "magento_grand_total": str(grand_total),
+            "magento_tax_amount": str(tax_amount),
+            "magento_shipping_amount": str(shipping_amount),
+            "magento_line_total": str(calculated_line_total),
+            "magento_checksum_valid": str(checksum_valid),
+            "magento_calculated_total": str(calculated_total),
 
             "magento_order_currency_code": mg_order.get("order_currency_code"),
 
@@ -157,7 +187,6 @@ def transform_order(mg_order: dict, region_id: str, sku_map: dict = None, shippi
         },
 
     }
-
 
     return {k: v for k, v in payload.items() if v is not None}
 

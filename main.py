@@ -75,6 +75,31 @@ def _parse_args():
         action="store_true",
         help="After creating Draft Order, attempt to confirm it as a real Order (if supported).",
     )
+    parser.add_argument(
+        "--delta-migration",
+        action="store_true",
+        help="Enable delta migration: only migrate orders updated after --delta-from-date",
+    )
+    parser.add_argument(
+        "--delta-from-date",
+        default=None,
+        help="Start date for delta migration (format: YYYY-MM-DD HH:mm:ss, e.g., '2024-01-01 00:00:00')",
+    )
+    parser.add_argument(
+        "--migrate-invoices",
+        action="store_true",
+        help="Migrate invoice metadata (optional, stored in order metadata)",
+    )
+    parser.add_argument(
+        "--migrate-payments",
+        action="store_true",
+        help="Migrate payment metadata (optional, stored in order metadata)",
+    )
+    parser.add_argument(
+        "--rollback-on-finalize-fail",
+        action="store_true",
+        help="Attempt rollback (delete draft order) if finalize fails",
+    )
  
     parser.add_argument("--run-id", default=None, help="Mã ID cho lần chạy (dùng cho tên file export)")
     parser.add_argument("--product-ids", default=None, help="Comma separated list of product IDs to sync")
@@ -201,7 +226,7 @@ def main():
         migrate_products(magento, medusa, args, mg_to_medusa_map=mg_to_medusa_map)
 
     if "orders" in entities:
-        migrate_orders(magento, medusa, args)
+        migrate_orders(magento, medusa, args, migration_state=None)
 
 
 

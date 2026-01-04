@@ -200,6 +200,11 @@ document.addEventListener('DOMContentLoaded', () => {
             order_ids: document.getElementById('ids_orders').value,
             dry_run: document.getElementById('opt_dry_run').checked,
             finalize_orders: document.getElementById('opt_finalize').checked,
+            migrate_invoices: document.getElementById('opt_migrate_invoices').checked,
+            migrate_payments: document.getElementById('opt_migrate_payments').checked,
+            rollback_on_finalize_fail: document.getElementById('opt_rollback_finalize').checked,
+            delta_migration: document.getElementById('opt_delta_migration').checked,
+            delta_from_date: document.getElementById('opt_delta_from_date').value || null,
             max_workers: 10
         };
     }

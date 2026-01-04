@@ -21,6 +21,7 @@ except Exception:
 
 from services.magento_auth import get_magento_token
 from services.medusa_auth import get_medusa_token
+from migrators.utils import clean_stop_signal
 
 
 
@@ -302,6 +303,16 @@ class MigrationGUI(tk.Tk):
         self.btn_run.pack(side="left")
         self.btn_stop = tk.Button(actions, text="Stop", width=14, state="disabled", command=self._stop)
         self.btn_stop.pack(side="left", padx=(10, 0))
+        
+        # Pause/Resume Button
+        self.pause_btn = ttk.Button(
+            actions, # Corrected parent frame to 'actions'
+            text="Pause",
+            command=self._pause_resume,
+            state=tk.DISABLED
+        )
+        self.pause_btn.pack(side="left", padx=(10, 0)) # Adjusted padx for consistency
+        
         tk.Button(actions, text="Clear log", width=14, command=self._clear_log).pack(side="left", padx=(10, 0))
 
         log_box = tk.LabelFrame(self, text="Log")
@@ -829,6 +840,12 @@ MEDUSA = {{
         # Disable run button immediately
         self.btn_run.config(state="disabled")
         self.btn_stop.config(state="normal")
+        self.pause_btn.config(state="normal", text="Pause") # Enable pause button and set text to "Pause"
+        
+        # Ensure clean state
+        clean_stop_signal()
+        toggle_pause_signal(active=False) # Ensure pause is cleared before starting
+        
         threading.Thread(target=self._run_background, args=(entities, limit), daemon=True).start()
 
     def _run_background(self, entities, limit):
@@ -873,6 +890,7 @@ MEDUSA = {{
                     self.after(0, lambda: messagebox.showerror("Magento Error", f"Magento login failed: {e}"))
                     self.after(0, lambda: self.btn_run.config(state="normal"))
                     self.after(0, lambda: self.btn_stop.config(state="disabled"))
+                    self.after(0, lambda: self.pause_btn.config(state="disabled")) # Disable pause button on error
                     return
             
             if self.cached_medusa_token:
@@ -888,6 +906,7 @@ MEDUSA = {{
                     self.after(0, lambda: messagebox.showerror("Medusa Error", f"Medusa login failed: {e}"))
                     self.after(0, lambda: self.btn_run.config(state="normal"))
                     self.after(0, lambda: self.btn_stop.config(state="disabled"))
+                    self.after(0, lambda: self.pause_btn.config(state="disabled")) # Disable pause button on error
                     return
  
             self._log(f"\n--- 🚀 STARTING MIGRATION SESSION: {run_id} ---\n")
@@ -922,6 +941,7 @@ MEDUSA = {{
             self._log(f"❌ Error starting background thread: {ex}\n")
             self.after(0, lambda: self.btn_run.config(state="normal"))
             self.after(0, lambda: self.btn_stop.config(state="disabled"))
+            self.after(0, lambda: self.pause_btn.config(state="disabled")) # Disable pause button on error
 
     def _reader(self):
         assert self._proc is not None
@@ -938,11 +958,36 @@ MEDUSA = {{
     def _stop(self):
         if not self._proc or self._proc.poll() is not None:
             return
-        self._log("\n[STOP] Stopping process...\n")
+        self._log("\n[STOP] Stopping process (creating signal)...\n")
+        
+        # Create stop signal file
+        try:
+            with open(".stop_signal", "w") as f:
+                f.write("stop")
+        except Exception as e:
+            self._log(f"Warning: Could not create stop signal file: {e}\n")
+
         try:
             self._proc.terminate()
         except Exception:
             pass
+        
+        toggle_pause_signal(active=False) # Ensure pause is cleared on stop
+        self.pause_btn.config(text="Pause", state=tk.DISABLED)
+
+    def _pause_resume(self):
+        """Toggle pause state."""
+        current_text = self.pause_btn.cget("text")
+        if current_text == "Pause":
+            # Enable pause
+            toggle_pause_signal(active=True)
+            self.pause_btn.config(text="Resume")
+            self._log("\n[PAUSE] Pausing migration process...\n")
+        else:
+            # Resume
+            toggle_pause_signal(active=False)
+            self.pause_btn.config(text="Pause")
+            self._log("\n[RESUME] Resuming migration process...\n")
 
     def _drain_queue(self):
         try:
@@ -955,6 +1000,8 @@ MEDUSA = {{
                         self.init_done = True
                     self.btn_run.config(state="normal")
                     self.btn_stop.config(state="disabled")
+                    self.pause_btn.config(state="disabled") # Disable pause button when process finishes
+                    self._proc = None # Clear _proc reference
                     break
                 self._log(item)
         except queue.Empty:

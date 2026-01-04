@@ -11,7 +11,9 @@ from migrators.utils import (
     _limit_iter, _is_duplicate_http, _resp_json_or_text, 
     _fetch_all_product_categories, _is_http_status, log_dry_run,
     handle_medusa_api_error, log_info, log_success, log_warning, 
-    log_error, log_step, log_progress, log_section, log_summary, get_timestamp
+    log_error, log_step, log_progress, log_section, log_summary, get_timestamp,
+    log_error, log_step, log_progress, log_section, log_summary, get_timestamp,
+    check_stop_signal, check_pause_signal
 )
 
 def _fetch_all_magento_categories(magento: MagentoConnector, args):
@@ -79,7 +81,11 @@ def migrate_products(magento: MagentoConnector, medusa: MedusaConnector, args, m
     products = _limit_iter(products, args.limit)
     product_count = len(products)
     print(f"[{get_timestamp()}] Found {product_count} products to migrate...\n")
-
+    
+    # 1. STOP CHECK
+    if check_pause_signal(): return
+    if check_stop_signal(): return
+    
     mg_to_medusa = mg_to_medusa_map if mg_to_medusa_map is not None else {}
     mg_category_map = None
 
@@ -97,6 +103,10 @@ def migrate_products(magento: MagentoConnector, medusa: MedusaConnector, args, m
             log_warning("No sales channels found, using default", indent=1)
     except Exception as e:
         log_warning(f"Failed to fetch sales channels: {e}. Using default.", indent=1)
+
+    # 2. STOP CHECK
+    if check_pause_signal(): return
+    if check_stop_signal(): return
     
     try:
         print(f"[{get_timestamp()}] Fetching shipping profiles from Medusa...")
@@ -110,8 +120,16 @@ def migrate_products(magento: MagentoConnector, medusa: MedusaConnector, args, m
     except Exception as e:
         log_warning(f"Failed to fetch shipping profiles: {e}. Using default.", indent=1)
 
+    # 3. STOP CHECK
+    if check_pause_signal(): return
+    if check_stop_signal(): return
+
     if not mg_category_map:
         mg_category_map = _fetch_all_magento_categories(magento, args)
+
+    # 4. STOP CHECK
+    if check_pause_signal(): return
+    if check_stop_signal(): return
 
     if not mg_to_medusa:
         existing = _fetch_all_product_categories(medusa)
@@ -125,6 +143,10 @@ def migrate_products(magento: MagentoConnector, medusa: MedusaConnector, args, m
                      mg_to_medusa[str(mg_id)] = c.get("id")
                  except:
                      pass
+                     
+    # 5. STOP CHECK
+    if check_pause_signal(): return
+    if check_stop_signal(): return
 
     count_success = 0
     count_ignore = 0
@@ -142,6 +164,16 @@ def migrate_products(magento: MagentoConnector, medusa: MedusaConnector, args, m
 
         processed_count = 0
         for future in as_completed(futures):
+            # CHECK STOP SIGNAL
+            if check_pause_signal(): pass # If paused, we just waited. If resumed, we continue.
+            
+            if check_stop_signal():
+                log_warning("🛑 Stop signal detected. Cancelling remaining product tasks...", indent=1)
+                for f in futures:
+                    if not f.done():
+                        f.cancel()
+                break
+                
             processed_count += 1
             product = futures[future]
             product_name = product.get('name', 'N/A')

@@ -5,7 +5,12 @@ from connectors.magento_connector import MagentoConnector
 from connectors.medusa_connector import MedusaConnector
 from extractors.customers import extract_customers
 from transformers.customer_transformer import transform_customer, transform_address
-from migrators.utils import _limit_iter, _is_duplicate_http, _resp_json_or_text, _is_http_status, log_dry_run, handle_medusa_api_error
+from migrators.utils import \
+    _limit_iter, _is_duplicate_http, _resp_json_or_text, \
+    log_dry_run, handle_medusa_api_error, \
+    get_timestamp, log_info, log_success, log_warning, log_error, log_section, log_summary, \
+    get_timestamp, log_info, log_success, log_warning, log_error, log_section, log_summary, \
+    check_stop_signal, check_pause_signal
 
 def _sync_single_customer(customer, medusa: MedusaConnector, args):
     email = customer.get("email")
@@ -51,6 +56,11 @@ def migrate_customers(magento: MagentoConnector, medusa: MedusaConnector, args):
     print("👤 CUSTOMER MIGRATION PHASE")
     print("="*50)
     print("📥 Fetching customers from Magento...")
+    
+    # STOP CHECK
+    if check_pause_signal(): return
+    if check_stop_signal(): return
+
     customers = extract_customers(magento)
     
     if getattr(args, "customer_ids", None):
@@ -61,6 +71,10 @@ def migrate_customers(magento: MagentoConnector, medusa: MedusaConnector, args):
     customers = _limit_iter(customers, args.limit)
     customer_count = len(customers)
     print(f"🚀 Migrating {customer_count} customers...\n")
+
+    # STOP CHECK
+    if check_pause_signal(): return
+    if check_stop_signal(): return
 
     count_success = 0
     count_ignore = 0
@@ -73,6 +87,16 @@ def migrate_customers(magento: MagentoConnector, medusa: MedusaConnector, args):
 
         processed_count = 0
         for future in as_completed(futures):
+            # CHECK STOP SIGNAL
+            if check_pause_signal(): pass 
+
+            if check_stop_signal():
+                log_warning("🛑 Stop signal detected. Cancelling remaining customer tasks...", indent=1)
+                for f in futures:
+                    if not f.done():
+                        f.cancel()
+                break
+                
             processed_count += 1
             customer = futures[future]
             email = customer.get('email', 'N/A')

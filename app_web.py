@@ -24,6 +24,11 @@ from migrators.product_migrator import migrate_products
 from migrators.category_migrator import migrate_categories
 from migrators.customer_migrator import migrate_customers
 from migrators.order_migrator import migrate_orders
+from migrators.utils import (
+    log_info, log_error, get_timestamp,
+    check_stop_signal, clean_stop_signal,
+    toggle_pause_signal, STOP_SIGNAL_FILE
+)
 import config
 import re
 
@@ -76,7 +81,7 @@ class StreamToSocket:
     def flush(self):
         sys.__stdout__.flush()
 
-# We will monkeypatch sys.stdout for the duration of the migration if possible, 
+# We will monkeypatch sys.stdout for the duration of the migration if possible,
 # or just rely on specific log calls if we modify the core utils.
 # Given the user constraints, let's try to capture output by overriding sys.stdout in the worker thread.
 
@@ -131,31 +136,31 @@ def fetch_entities():
     # Implementation similar to app_gui.py but adapted for web
     data = request.json
     entity_type = data.get('type')
-    
+
     magento_config = data.get('magento_config')
     if magento_config and 'base_url' in magento_config:
         magento_config['base_url'] = _sanitize_url(magento_config['base_url'])
 
     token = migration_state.get('magento_token')
-    
+
     if not token and magento_config:
          # Try to auto-login if token missing but config provided
          try:
             token = get_magento_token(
-                magento_config['base_url'], 
-                magento_config['username'], 
-                magento_config['password'], 
+                magento_config['base_url'],
+                magento_config['username'],
+                magento_config['password'],
                 verify_ssl=magento_config.get('verify_ssl', False)
             )
             migration_state['magento_token'] = token
          except Exception as e:
              return jsonify({'success': False, 'error': f"Login failed: {str(e)}"})
-    
+
     if not token:
         return jsonify({'success': False, 'error': "Not authenticated with Magento"})
 
     client = MagentoConnector(magento_config['base_url'], token, magento_config.get('verify_ssl', False))
-    
+
     items = []
     try:
         if entity_type == 'products':
@@ -163,7 +168,7 @@ def fetch_entities():
             res = client.get_products(page=1, page_size=200, fields="items[id,name,sku]")
             for p in res.get('items', []):
                 items.append({'id': p.get('id'), 'label': f"[{p.get('id')}] {p.get('sku')} - {p.get('name')}"})
-        
+
         elif entity_type == 'categories':
             res = client.get_categories(page=1, page_size=1000, fields="items[id,name,level]")
             for c in res.get('items', []):
@@ -174,7 +179,7 @@ def fetch_entities():
             res = client.get_customers(page=1, page_size=200)
             for c in res.get('items', []):
                  items.append({'id': c.get('id'), 'label': f"[{c.get('id')}] {c.get('email')}"})
-        
+
         elif entity_type == 'orders':
             res = client.get_orders(page=1, page_size=50)
             for o in res.get('items', []):
@@ -182,10 +187,10 @@ def fetch_entities():
                 inc = o.get('increment_id')
                 total = o.get('grand_total')
                 items.append({
-                    'id': oid, 
+                    'id': oid,
                     'label': f"[{oid}] Order #{inc} - ${total}"
                 })
-                 
+
         return jsonify({'success': True, 'items': items})
     except Exception as e:
         return jsonify({'success': False, 'error': str(e)})
@@ -198,10 +203,10 @@ def run_migration_task(config_data):
     # Set stdout to our socket emitter
     original_stdout = sys.stdout
     sys.stdout = StreamToSocket()
-    
+
     try:
         migration_state['running'] = True
-        
+
         # Prepare args
         args = Args(
             limit=int(config_data.get('limit', 0)),
@@ -212,41 +217,46 @@ def run_migration_task(config_data):
             order_ids=config_data.get('order_ids'),
             customer_ids=config_data.get('customer_ids'),
             finalize_orders=config_data.get('finalize_orders', True),
+            delta_migration=config_data.get('delta_migration', False),
+            delta_from_date=config_data.get('delta_from_date'),
+            migrate_invoices=config_data.get('migrate_invoices', False),
+            migrate_payments=config_data.get('migrate_payments', False),
+            rollback_on_finalize_fail=config_data.get('rollback_on_finalize_fail', False),
             verify_ssl=config_data['magento'].get('verify_ssl', False),
             category_strategy="list", # Default as per CLI
             skip_init_log=True
         )
-        
+
         selected_entities = config_data.get('entities', [])
-        
+
         # Setup Connectors
         magento = MagentoConnector(
             base_url=_sanitize_url(config_data['magento']['base_url']),
             token=migration_state['magento_token'],
             verify_ssl=args.verify_ssl
         )
-        
+
         medusa = MedusaConnector(
             base_url=_sanitize_url(config_data['medusa']['base_url']),
             api_token=migration_state['medusa_token']
         )
-        
+
         print(f"🚀 Starting Migration [Limit: {args.limit}, Dry-run: {args.dry_run}]")
-        
+
         mg_to_medusa_map = {}
 
         if 'categories' in selected_entities and not migration_state.get('stop_requested'):
             mg_to_medusa_map = migrate_categories(magento, medusa, args)
-            
+
         if 'customers' in selected_entities and not migration_state.get('stop_requested'):
             migrate_customers(magento, medusa, args)
-            
+
         if 'products' in selected_entities and not migration_state.get('stop_requested'):
             migrate_products(magento, medusa, args, mg_to_medusa_map=mg_to_medusa_map)
-            
+
         if 'orders' in selected_entities and not migration_state.get('stop_requested'):
-            migrate_orders(magento, medusa, args)
-            
+            migrate_orders(magento, medusa, args, migration_state)
+
         print("Migration process finished.")
         socketio.emit('status_update', {'running': False, 'message': 'Completed'})
 
@@ -258,30 +268,58 @@ def run_migration_task(config_data):
     finally:
         migration_state['running'] = False
         migration_state['stop_requested'] = False
+        toggle_pause_signal(active=False) # Ensure pause is cleared
         sys.stdout = original_stdout
 
 @app.route('/api/start', methods=['POST'])
 def start_migration():
     if migration_state['running']:
         return jsonify({'success': False, 'error': 'Migration is already running'})
-        
+
     config_data = request.json
-    
+
     # Check tokens
     if not migration_state.get('magento_token') or not migration_state.get('medusa_token'):
          return jsonify({'success': False, 'error': 'Please authenticate both Magento and Medusa first.'})
-    
+
+    # Ensure clean state
+    clean_stop_signal()
+    toggle_pause_signal(active=False)
+
+    # Run migration in a separate thread
     thread = threading.Thread(target=run_migration_task, args=(config_data,))
     thread.daemon = True
     thread.start()
-    
+
     return jsonify({'success': True})
 
 @app.route('/api/stop', methods=['POST'])
 def stop_migration():
     if migration_state['running']:
         migration_state['stop_requested'] = True
+        toggle_pause_signal(active=False) 
+        # Mirror with file signal for migrators
+        try:
+            with open(STOP_SIGNAL_FILE, 'w') as f:
+                f.write('stop')
+        except Exception as e:
+            print(f"Error creating stop signal file: {e}")
+            
         return jsonify({'success': True, 'message': 'Stop requested...'})
+    return jsonify({'success': False, 'error': 'Not running'})
+
+@app.route('/api/pause', methods=['POST'])
+def pause_migration():
+    if migration_state['running']:
+        toggle_pause_signal(active=True)
+        return jsonify({'success': True, 'message': 'Pause requested...'})
+    return jsonify({'success': False, 'error': 'Not running'})
+
+@app.route('/api/resume', methods=['POST'])
+def resume_migration():
+    if migration_state['running']:
+        toggle_pause_signal(active=False)
+        return jsonify({'success': True, 'message': 'Resume requested...'})
     return jsonify({'success': False, 'error': 'Not running'})
 
 if __name__ == '__main__':
