@@ -61,7 +61,7 @@ def transform_product(mg_product, magento_base_url, categories=None, sales_chann
         "variants": [
             {
                 "title": "Default variant",
-                "manage_inventory": False,
+                "manage_inventory": True,
                 "sku": mg_product.get("sku"),
                 "options": {
                     "Default": "Default"

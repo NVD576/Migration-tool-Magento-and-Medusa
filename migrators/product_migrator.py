@@ -12,7 +12,6 @@ from migrators.utils import (
     _fetch_all_product_categories, _is_http_status, log_dry_run,
     handle_medusa_api_error, log_info, log_success, log_warning, 
     log_error, log_step, log_progress, log_section, log_summary, get_timestamp,
-    log_error, log_step, log_progress, log_section, log_summary, get_timestamp,
     check_stop_signal, check_pause_signal
 )
 
@@ -23,7 +22,7 @@ def _fetch_all_magento_categories(magento: MagentoConnector, args):
     log_success(f"Fetched {len(cat_map)} categories successfully.", indent=1)
     return cat_map
 
-def _sync_single_product(product, magento: MagentoConnector, medusa: MedusaConnector, args, mg_to_medusa_map, mg_category_map, sales_channel_id, shipping_profile_id):
+def _sync_single_product(product, magento: MagentoConnector, medusa: MedusaConnector, args, mg_to_medusa_map, mg_category_map, sales_channel_id, shipping_profile_id, stock_location_id=None):
     product_name = product.get('name', 'N/A')
     product_sku = product.get('sku', 'N/A')
     print(f"[{get_timestamp()}] Syncing: {product_name} (SKU: {product_sku})")
@@ -58,8 +57,85 @@ def _sync_single_product(product, magento: MagentoConnector, medusa: MedusaConne
         return ('ignore', "Dry run enabled")
 
     try:
-        medusa.create_product(payload, idempotency_key=f"product:{product.get('id')}")
+        res = medusa.create_product(payload, idempotency_key=f"product:{product.get('id')}")
         log_success(f"Product '{product_name}' synced.", indent=1)
+        
+        # INVENTORY SYNC
+        if stock_location_id and not args.dry_run:
+            try:
+                # Extract stock quantity from Magento
+                stock_item = (product.get("extension_attributes") or {}).get("stock_item") or {}
+                qty = int(stock_item.get("qty", 0))
+                
+                # Extract variants from Medusa response
+                # Medusa v2 response structure for created product might differ, but usually it's {'product': {...}}
+                created_product = res.get("product") or res
+                product_id = created_product.get("id")
+                variants = created_product.get("variants") or []
+                
+                if not variants and product_id:
+                     # If variants not in response, try to fetch them? 
+                     # For now assume they are there as they were in the payload
+                     pass
+
+                for variant in variants:
+                    v_id = variant.get("id")
+                    v_sku = variant.get("sku")
+                    
+                    if not v_sku:
+                        continue
+
+                    # 1. Check if inventory item already exists
+                    inv_item = medusa.get_inventory_item_by_sku(v_sku)
+                    
+                    if not inv_item:
+                        # Create inventory item if it doesn't exist
+                        inv_payload = {
+                            "sku": v_sku,
+                            "title": f"Inventory for {product_name} - {v_sku}",
+                            "description": f"Inventory for {product_name} - {v_sku}",
+                            "metadata": {"magento_id": str(product.get("id"))}
+                        }
+                        try:
+                            inv_res = medusa.create_inventory_item(inv_payload)
+                            inv_item = inv_res.get("inventory_item") or inv_res
+                        except Exception as e:
+                            # If it still fails, check again (race condition)
+                            inv_item = medusa.get_inventory_item_by_sku(v_sku)
+                            if not inv_item:
+                                log_warning(f"Failed to create inventory item for SKU {v_sku}: {e}", indent=2)
+                                continue
+                    
+                    inv_id = inv_item.get("id")
+                    
+                    if inv_id:
+                        # 2. Link variant to inventory item
+                        try:
+                            # Check if already linked
+                            existing_links = variant.get("inventory_items") or variant.get("inventory") or []
+                            is_linked = any(l.get("inventory_item_id") == inv_id or l.get("id") == inv_id for l in existing_links)
+                            
+                            if not is_linked:
+                                medusa.link_variant_to_inventory_item(product_id, v_id, inv_id, quantity=1)
+                        except Exception as link_e:
+                            # If linked already, ignore (check for common "exists" error strings)
+                            err_str = str(link_e).lower()
+                            if "already exists" not in err_str and "duplicate" not in err_str and "400" not in err_str and "409" not in err_str:
+                                log_warning(f"Link failed for variant {v_sku}: {link_e}", indent=2)
+                        
+                        # 3. Add location level with quantity
+                        try:
+                            medusa.add_inventory_item_location_level(inv_id, stock_location_id, qty)
+                        except Exception as loc_e:
+                            err_str = str(loc_e).lower()
+                            if "already exists" not in err_str and "duplicate" not in err_str and "400" not in err_str and "409" not in err_str:
+                                log_warning(f"Location level failed for SKU {v_sku}: {loc_e}", indent=2)
+                        else:
+                            log_success(f"Inventory synced for variant {v_sku}: {qty} units at location {stock_location_id}", indent=2)
+
+            except Exception as inv_e:
+                log_warning(f"Inventory sync failed for '{product_name}': {inv_e}", indent=2)
+
         return ('success', None)
     except requests.exceptions.HTTPError as e:
         return handle_medusa_api_error(e, "Product", product_name)
@@ -124,6 +200,19 @@ def migrate_products(magento: MagentoConnector, medusa: MedusaConnector, args, m
     if check_pause_signal(): return
     if check_stop_signal(): return
 
+    stock_location_id = None
+    try:
+        print(f"[{get_timestamp()}] Fetching stock locations from Medusa...")
+        sl_response = medusa.get_stock_locations()
+        locations = sl_response.get("stock_locations", []) or sl_response.get("data", [])
+        if locations:
+            stock_location_id = locations[0].get("id")
+            log_success(f"Using stock location: {locations[0].get('name')} ({stock_location_id})", indent=1)
+        else:
+            log_warning("No stock locations found. Inventory sync will be skipped.", indent=1)
+    except Exception as e:
+        log_warning(f"Failed to fetch stock locations: {e}. Inventory sync will be skipped.", indent=1)
+
     if not mg_category_map:
         mg_category_map = _fetch_all_magento_categories(magento, args)
 
@@ -158,7 +247,7 @@ def migrate_products(magento: MagentoConnector, medusa: MedusaConnector, args, m
         futures = {
             executor.submit(
                 _sync_single_product,
-                product, magento, medusa, args, mg_to_medusa, mg_category_map, sales_channel_id, shipping_profile_id
+                product, magento, medusa, args, mg_to_medusa, mg_category_map, sales_channel_id, shipping_profile_id, stock_location_id
             ): product for product in products
         }
 

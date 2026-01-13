@@ -149,40 +149,30 @@ def migrate_categories(magento: MagentoConnector, medusa: MedusaConnector, args)
 
     print(f"[{get_timestamp()}] Starting transformation & sync process...")
     
-    # Process level-by-level (BFS)
-    queue = [node for node in tree]  # start with root nodes
+    # Process level-by-level
+    current_level = [node for node in tree]  # start with root nodes
     
-    while queue:
+    while current_level:
         # CHECK STOP SIGNAL
         if check_pause_signal(): break
         if check_stop_signal():
             log_warning("🛑 Stop signal detected. Cancelling remaining category tasks...", indent=1)
             break
             
-        current_node = queue.pop(0)
-        cat = current_node['data']
-        children = current_node['children']
+        next_level = []
         
-        # Add children to queue
-        queue.extend(children)
-
-        # Assuming level_categories is meant to be the current category being processed
-        # or a batch collected from the queue. Given the snippet, it's ambiguous.
-        # To make it syntactically correct, we'll process `cat` as a single item.
-        level_categories = [cat] # This makes the `for cat in level_categories` loop work.
-        print(f"\n-- Syncing category {cat.get('name')} (ID: {cat.get('id')}) --") # Adapted print statement
-
         with ThreadPoolExecutor(max_workers=args.max_workers or 10) as executor:
             futures = {
-                executor.submit(_sync_single_category, c, medusa, args, mg_to_medusa, handle_to_id): c
-                for c in level_categories # Changed `cat` to `c` to avoid shadowing outer `cat`
+                executor.submit(_sync_single_category, node['data'], medusa, args, mg_to_medusa, handle_to_id): node
+                for node in current_level
             }
 
             for future in as_completed(futures):
-                # STOP CHECK inside future loop
+                # STOP CHECK inside parallel loop
                 if check_pause_signal(): pass 
 
-                cat = futures[future]
+                node = futures[future]
+                cat_data = node['data']
                 try:
                     mg_id, new_medusa_id, status, handle = future.result()
                     if status == 'success':
@@ -190,17 +180,28 @@ def migrate_categories(magento: MagentoConnector, medusa: MedusaConnector, args)
                         if new_medusa_id:
                             mg_to_medusa[mg_id] = new_medusa_id
                             if handle: handle_to_id[handle] = new_medusa_id
+                        # Add children to next level ONLY if parent succeeded
+                        next_level.extend(node['children'])
                     elif status == 'ignore':
                         count_ignore += 1
                         if new_medusa_id:
                             mg_to_medusa[mg_id] = new_medusa_id
+                        # Add children to next level
+                        next_level.extend(node['children'])
                     elif status == 'defer':
-                        deferred_categories.append(cat)
+                        # This shouldn't happen with BFS level processing if parents are root
+                        # but keep for safety
+                        deferred_categories.append(cat_data)
                     else: 
                         count_fail += 1
+                        # We might still want to try children, or not. 
+                        # Usually if parent fails, children will defer anyway.
+                        next_level.extend(node['children'])
                 except Exception as e:
-                    print(f"\n❌ [CRITICAL] Worker for category '{cat.get('name')}' failed: {e}")
+                    print(f"\n❌ [CRITICAL] Worker for category '{cat_data.get('name')}' failed: {e}")
                     count_fail += 1
+        
+        current_level = next_level
 
     if deferred_categories:
         print(f"\n⚠️ Could not sync {len(deferred_categories)} categories due to missing parents:")

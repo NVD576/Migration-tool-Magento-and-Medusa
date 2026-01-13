@@ -97,3 +97,51 @@ class MedusaConnector(BaseConnector):
     def create_customer_address(self, customer_id, address):
         endpoint = f"admin/customers/{customer_id}/addresses"
         return self._request("POST", endpoint, json=address)
+
+    def create_inventory_item(self, data):
+        endpoint = "admin/inventory-items"
+        return self._request("POST", endpoint, json=data)
+
+    def list_inventory_items(self, params=None):
+        endpoint = "admin/inventory-items"
+        return self._request("GET", endpoint, params=params)
+
+    def get_inventory_item_by_sku(self, sku):
+        if not sku:
+            return None
+        res = self.list_inventory_items(params={"sku": sku})
+        items = res.get("inventory_items", []) or res.get("data", [])
+        if items:
+            return items[0]
+        return None
+
+    def add_inventory_item_location_level(self, inventory_item_id, location_id, quantity):
+        endpoint = f"admin/inventory-items/{inventory_item_id}/location-levels/batch"
+        payload = {
+            "create": [
+                {
+                    "location_id": location_id,
+                    "stocked_quantity": quantity
+                }
+            ]
+        }
+        return self._request("POST", endpoint, json=payload)
+
+    def link_variant_to_inventory_item(self, product_id, variant_id, inventory_item_id, quantity=1):
+        # Medusa v2 uses a batch endpoint for product variants inventory items
+        endpoint = f"admin/products/{product_id}/variants/inventory-items/batch"
+        payload = {
+            "create": [
+                {
+                    "variant_id": variant_id,
+                    "inventory_item_id": inventory_item_id,
+                    "required_quantity": quantity
+                }
+            ]
+        }
+        return self._request("POST", endpoint, json=payload)
+
+    def get_stock_locations(self, limit=50, offset=0):
+        endpoint = "admin/stock-locations"
+        params = {"limit": limit, "offset": offset}
+        return self._request("GET", endpoint, params=params)
